@@ -1,0 +1,10 @@
+* tr_float_cap_switch -- floating nodes after switching: a B-source current switch (exactly zero conductance when off) leaves node y connected to the rest only through capacitors; no DC path at the operating point either
+* stock: FAIL: no convergence at the operating point (singular matrix: nodes x, y have no DC path)
+* probe: v(x) v(y)
+V1 in 0 PULSE(0 5 10u 1u 1u 30u 100u)
+C1 in x 1n
+C2 x y 1n
+Vc ctl 0 PULSE(0 5 50u 1u 1u 20u 200u)
+Bsw y 0 I = (v(ctl) > 2.5) ? v(y)*1e-3 : 0
+.tran 100n 150u
+.end

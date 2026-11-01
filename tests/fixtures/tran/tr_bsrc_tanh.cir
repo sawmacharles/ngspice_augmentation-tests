@@ -1,0 +1,10 @@
+* tr_bsrc_tanh -- B-source with a huge-gain tanh (gain 1e6): a 1 kHz sine becomes a square wave with ~1 ns transitions that the step control has to find, then RC-filtered
+* stock: completes at default settings
+* probe: v(sq) v(f)
+V1 in 0 SIN(0 1 1k)
+Bsq sq 0 V = tanh(1e6*v(in))
+R1 sq f 1k
+C1 f 0 100n
+.meas tran vf FIND v(f) AT=2.75m
+.tran 1u 3m
+.end

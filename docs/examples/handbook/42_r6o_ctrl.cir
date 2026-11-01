@@ -1,0 +1,30 @@
+* handbook example 42 (card #552), copy of tests/fixtures/pac_r6o_ctrl2out.cir
+* pac_r6o_ctrl2out.cir -- open-loop ideal-switch PWM buck (see
+* pss_r6o_shoot.cir's header for why this topology), Vctrl now carries
+* DC {vctrl_dc} AC 1 for a `.pac`/`.pstb`-style control-to-output sweep
+* harness (test_pac.py-style: no .control block, body only). Card #494
+* (plan T6.1, saltation) baseline-failure fixture.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param vramp=2 vctrl_dc=0.55
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+
+Shs vin sw ctrlnode ramp SWMOD
+Sls sw 0   ramp ctrlnode SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC {vctrl_dc} AC 1
+
+.end

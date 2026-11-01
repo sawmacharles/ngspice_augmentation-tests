@@ -1,0 +1,10 @@
+* tr_lc_highq -- nearly lossless parallel LC, 100 cycles of ringing (trapezoidal damping/phase error); step current kick
+* stock: completes at default settings
+* probe: v(n)
+I1 0 n PULSE(0 1m 1u 1n 1n 10u 1)
+L1 n 0 1m
+C1 n 0 1u
+R1 n 0 1Meg
+.meas tran vpk MAX v(n) FROM=18m TO=20m
+.tran 1u 20m
+.end

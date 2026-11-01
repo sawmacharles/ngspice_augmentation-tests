@@ -1,0 +1,50 @@
+* stb6_r3_tuned: card #476 test fixture -- tests/fixtures/compopt_r3_averaged_detuned.cir
+* (R3 voltage-mode buck, AVERAGED linear small-signal stand-in, type-III compensator)
+* with r2/c2 set to the TUNED point docs/compopt.md's worked example found
+* (tools/compopt.py, target fc=34000 Hz, PM=38 deg, seed=0, 2026-09-28):
+*
+*   final values: r2=27950.5, c2=2.4425e-09
+*   fc=34000 Hz (target 34000, rel err 0.001%), PM=37.998 deg (target 38.000)
+*
+* Everything else (topology, other .param values) is IDENTICAL to
+* compopt_r3_averaged_detuned.cir -- see that file's header for the averaging
+* derivation, the real-switching-deck cross-check, and why this compensator's
+* R1in/C1f branch is a near-integrator (the reason this fixture exists: card #476
+* is the fix for the false low_f_positive_feedback this near-integrator branch
+* triggered at fstart=10 Hz on the detuned starting point; this TUNED point is
+* used to confirm the new low_f_integrator label fires on a genuinely healthy,
+* well-margined loop of the same near-integrator family).
+.param vin_v=12 fs=500k
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27950.5 r3=101.7 c1=36.35p c2=2.4425e-9 c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+
+Vin vin 0 DC {vin_v}
+* averaged switch network: duty-cycle-controlled linear source replaces Bhs/Bls + Bcmp/ramp
+Eavg sw 0 opout 0 {vin_v/vramp}
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval}
+Rload vout 0 {rload}
+
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+.end

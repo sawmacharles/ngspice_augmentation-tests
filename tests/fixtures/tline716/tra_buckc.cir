@@ -1,0 +1,19 @@
+* tra_buckc: open-loop ideal-switch buck (500 kHz, PWM by a ramp comparator) whose output reaches the load through a lossless
+* line (TRA, Z0 5 ohm, TD 0.3 us); the control voltage carries the small-signal injection (control-to-output)
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=4.7u rdcr=20m cval=4.7u esrval=20m rload=3.3 cl=100n
+.param vramp=2 vctrl_dc=0.9 td=0.3u z0=5
+Vin vin 0 DC {vin_v}
+Shs vin sw ctrlnode ramp SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron=10m roff=1Meg)
+D1 0 sw DMOD
+.model DMOD D(IS=1e-9 RS=0.05 N=1.05 CJO=0 VJ=0.7 M=0.5 TT=0)
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+T1 vout 0 vl 0 Z0={z0} TD={td}
+Rload vl 0 {rload}
+Cl vl 0 {cl}
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC {vctrl_dc} AC 1

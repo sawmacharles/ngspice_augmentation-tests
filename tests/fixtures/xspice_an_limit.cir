@@ -1,0 +1,6 @@
+* xspice_an_limit: XSPICE code model 'limit' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+A1 in o1 m
+.model m limit(in_offset=0 gain=2 out_lower_limit=-0.5 out_upper_limit=1.5 limit_range=0.1 fraction=FALSE)
+Rl o1 out 1k
+Co out 0 100p

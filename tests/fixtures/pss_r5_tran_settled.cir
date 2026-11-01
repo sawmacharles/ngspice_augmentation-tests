@@ -1,0 +1,106 @@
+* R5 free-running hysteretic buck (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r5_hysteretic_buck.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r5_hysteretic_buck/)
+*
+* Same power stage as R3/R4 (12V->3.3V target, L=10uH C=100uF Esr=10mOhm
+* Rload=3.3), but no clock and no compensator: this is a self-oscillating
+* (free-running) hysteretic converter, direct voltage hysteresis on Vout
+* (no divider/reference op-amp -- there is nothing here for T2.2/T5.2 loop-
+* gain probing to break, so unlike R3/R4 there is no XP instance in this
+* deck; not asked for in the task for R5 either). Switching frequency is an
+* OUTPUT of the simulation, not a .param -- see MEASURED below.
+*
+* Control: a self-referencing (regenerative) smooth Schmitt trigger, not
+* the R4-style clocked latch. First attempt used two independent level
+* comparators (Set when vout<vref_lo, Reset when vout>vref_hi) driving the
+* same Cq/Bq construction as R4's latch -- found 2026-09-27 (card #450) to
+* be WRONG for this circuit: once the startup ring-down's amplitude decayed
+* enough, q drifted into the comparators' shared dead zone (both ~0) and
+* FROZE at a non-binary value (q=0.484), settling the whole converter into
+* a static linear-regulator equilibrium (Vout=3.3001V constant, zero
+* ripple, zero switching) instead of continuing to oscillate -- a real
+* trap, not a transient artifact (checked out to 800us). The two-comparator
+* design has no mechanism to prevent a stable fixed point inside the
+* transition band. Fixed by making the threshold ITSELF depend on q (true
+* hysteresis, Schmitt-trigger style), so there is no fixed point except
+* q~=0 and q~=1:
+*   threshold(q) = vref_lo + hys*q     (vref_lo at q=0, vref_hi at q=1)
+*   q_target = 0.5*(1 - tanh(khys*(vout - threshold(q))))
+* This is self-referential (q_target depends on q), solved implicitly each
+* Newton iteration like a real positive-feedback Schmitt trigger. A first
+* try wrote q directly as this voltage (Bq q 0 V=...) with no capacitor:
+* that hit "timestep too small" exactly at the switching instant (checked
+* with an isolated 6-line reproducer) because a zero-capacitance algebraic
+* self-reference has a literal jump discontinuity with nothing to
+* regularize it in time. Fixed by driving q through a capacitor instead
+* (relaxation dynamics dq/dt=(kdrive/cq)*(q_target-q)): fast, but not
+* infinitely fast, which the transient solver can resolve. See Bq below.
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table). Cold start from Vout=0V with no soft-start or current limit
+* overshoots hard on the very first pulse (Vout peaks ~7.6V, ~2.3x the
+* 3.3V target, before the reset comparator's turn-off plus the stored
+* inductor energy's freewheel-down brings it back into the hysteresis
+* band) -- a bigger overshoot than R3/R4/R6's compensated startups, an
+* expected consequence of hysteretic control having no loop dynamics to
+* limit the first on-time. Settles into steady free-running switching by
+* ~400us. Steady state: t_period 2.341067us and 2.342250us at two points
+* ~100us apart (RISE=10/11 and RISE=50/51) -- consistent, i.e. genuinely
+* periodic, not drifting. fsw ~= 427.2-427.6 kHz (an output, not a
+* parameter). Vout: 3.0406V(200us, still settling) -> 3.3004V(1000us) ->
+* 3.3005V(3000us, final). Ripple(2900-3000us)=5.637mV (~0.17%, close to
+* the hys=20mV .param but not equal -- the L/C filtering and Resr/Rdcr
+* drops shape the actual ripple). duty(final)=0.2789 vs ideal Vout/Vin=
+* 0.275 -- close. Runtime 2.3s for the full 3ms run.
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+.ic v(q)=0.5
+* (q has no DC path either, same as R3/R4's compensator nodes -- 'uic' and
+* this .ic avoid the same op-point trap noted in r3_vm_buck.cir. An earlier
+* attempt also tried .ic v(vout)=3.3, but vout is tied to cx -- which
+* Cout's own IC=0 fixes at 0V -- through only a 10 mOhm Resr, so the two
+* ICs fought and vout collapsed to ~0 anyway; dropped it and just let this
+* deck cold-start from 0V like R3/R4/R6, which is a fine test too: q stays
+* pinned at 1 (always-on) until Vout first reaches vref_hi, then hysteretic
+* switching begins.)
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+* self-referencing Schmitt trigger (see header): q_target depends on q
+* itself through threshold(q)=vref-hys/2+hys*q. Same B-source sign
+* convention as r4_pcm_buck.cir's latch (current Bxxx n1 n2 I=expr flows
+* n1->n2, so the capacitor at q sees -expr; want Cq*dq/dt=+kdrive*(target-q)
+* so expr=kdrive*(q-target)):
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-({vref}-{hys}/2+{hys}*V(q))))))
+
+
+.control
+set filetype=ascii
+* card #489: fine-tstep reference for PSS-FREERUN's period/orbit check --
+* see docs/pss-pac.md's free-running section and the card #489 report for
+* why a fine tstep matters here specifically: q's own relaxation time
+* constant (cq/kdrive = 1e-12/1e-3 = 1ns) is comparable to refs/
+* r5_hysteretic_buck.cir's own reference tstep (10ns), which this card
+* found gives a badly ALIASED period measurement (cycle-to-cycle jitter
+* +-3% from output-grid interpolation noise alone, not real physical
+* jitter -- confirmed by re-measuring the SAME deck's orbit starting from
+* PSS-FREERUN's own converged state at tstep=10ps: rock-stable to <1e-6
+* relative from cycle to cycle). 2ns here is a practical middle ground
+* (~1000x finer than the native period, not 10ps-level, so this run
+* finishes in a reasonable time even over the ~450us this deck's own
+* header documents needing to settle).
+tran 2n 460u 0 uic
+wrdata ~/Work/data/ngspice_augmentation/pss/r5_hysteretic_buck/r5_tran_settled.txt v(vout) v(q) i(L1)
+.endc
+.end

@@ -1,0 +1,52 @@
+* b_ldo_loop_native.cir -- SAME LDO-style loop as
+* docs/examples/a_ldo_loop_lgprobe.cir, broken at the SAME wire, but with
+* the probe written as a single existing 0 V V-source (native `.stb`'s
+* probe=<Vname> only resolves a plain voltage-source instance -- it does
+* not expand the stb/lgprobe.lib subcircuit, so "Vprobe fb fbtop DC 0"
+* replaces "XP fb fbtop lgprobe" here). Electrically this is the same
+* break: lgprobe.lib's Vi/Ii/Vb are themselves a 0 V branch with the same
+* a=downstream/b=upstream roles (see stb/lgprobe.lib and
+* tests/test_stb_native.py's check_dc_identical, which checks this
+* equivalence bit-for-bit on the DC operating point). docs/stb.md example
+* (b) -- run against the private fork build (buildrecipe/README.md), not
+* the system ngspice.
+*
+* Run (interactive `stb` command, control block below), or as a netlist
+* card:
+*   .stb dec 30 10 10meg probe="Vprobe"
+* (quoted -- see docs/stb.md's syntax reference for why the netlist-card
+* form needs quotes and the interactive command does not).
+
+.param gm1=5m rp1=1meg cp1=100p cfb=2p
+.param gm2=400m rout=3.3 esr=50m cout=47u
+.param rf1=68k rf2=12k
+
+Vref vref 0 DC 0 AC 0
+G1 0 ea vref fb {gm1}
+Rp1 ea 0 {rp1}
+Cp1 ea 0 {cp1}
+Cfb fb 0 {cfb}
+
+Vin vin 0 DC 5 AC 0
+G2 vin vout ea 0 {gm2}
+Rout vout 0 {rout}
+Cout vout esrnode {cout}
+Resr esrnode 0 {esr}
+
+Rf1 vout fbtop {rf1}
+Rf2 fbtop 0 {rf2}
+
+Vprobe fb fbtop DC 0
+
+* No wrdata below on purpose -- this deck's job is the printed phase/gain
+* margin lines (STBan()'s own stdout output), which need no output file at
+* all. docs/stb.md's example (b) numbers come straight from that output.
+* A run that also wants the T(f)/loopgain(f) trace would add, e.g.,
+*   wrdata <absolute path under ~/Work/data/ngspice_augmentation/...> stb1.t
+* -- never a bare relative filename, which would land inside this repo.
+.control
+stb dec 30 10 10meg probe=Vprobe
+quit
+.endc
+.end
+

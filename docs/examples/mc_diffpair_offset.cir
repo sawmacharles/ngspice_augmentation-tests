@@ -1,0 +1,34 @@
+* mc_diffpair_offset.cir -- worked example for docs/mc.md (card #473, plan
+* T10.5): a 5T-style NMOS differential pair, input-referred local/mismatch
+* offset injected as a series voltage source in M2's gate path
+* (@@VOFF@@, tools/mc.py substitutes a Pelgrom-scaled sampled value here --
+* see docs/mc.md for the full worked example and captured numbers).
+* Same synthetic nch4 BSIM4 model family as bench/gen_analog_block.py --
+* synthetic, not derived from any real design.
+.param vdd_v=3.3 vcm=1.0
+
+.model nch4 nmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=300 vsat=1.1e5
++ cgso=2e-10 cgdo=2e-10 cgbo=0 cgsl=0 cgdl=0
++ cf=0 cjs=1e-4 cjd=1e-4 cjswd=1e-10 cjswgd=1e-10
+
+Vdd vdd 0 DC {vdd_v}
+R1 vdd out1 10k
+R2 vdd out2 10k
+M1 out1 inp tail 0 nch4 w=@@MW@@u l=@@ML@@u
+M2 out2 intn tail 0 nch4 w=@@MW@@u l=@@ML@@u
+Itail tail 0 DC 100u
+Vinp inp 0 DC {vcm}
+Vcmn intn0 0 DC {vcm}
+Voff intn intn0 DC @@VOFF@@
+
+.control
+op
+let vd = v(out1) - v(out2)
+set vds = $&vd
+echo MCMEAS vdiff=$vds
+.endc
+.end

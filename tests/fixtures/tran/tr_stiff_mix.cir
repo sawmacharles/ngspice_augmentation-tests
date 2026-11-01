@@ -1,0 +1,15 @@
+* tr_stiff_mix -- stiff network, time constants 1 ps and 1 ms together (R=1 ohm,C=1 pF branch; R=1k,C=1 uF branch) behind a 1 ps edge and a diode
+* stock: completes at default settings
+* probe: v(a) v(b) v(c)
+.model dd D(IS=1e-14 N=1 RS=1 CJO=1p)
+V1 in 0 PULSE(0 2 10n 1p 1p 3m 6m)
+R1 in a 1
+C1 a 0 1p
+R2 a b 100
+D1 b c dd
+R3 c d 1k
+C3 d 0 1u
+R4 c 0 100k
+.meas tran vd FIND v(d) AT=2.5m
+.tran 100n 4m
+.end

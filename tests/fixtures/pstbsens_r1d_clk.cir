@@ -1,0 +1,32 @@
+* pstbsens_r1d_clk.cir -- card #475 periodic half, tools/pstbsens.py equivalence fixture (2026-10-14).
+* = sens_r1d_bias.cir (OTA follower, parameters that move the bias) PLUS an unrelated periodic
+* drive (Vclk/Rclk/Cclk, decoupled from the loop, as pstb_linear.cir) so .pss has a period, and a
+* .pstb card over the band of the .stb test. The orbit is constant (the clock does not reach the loop),
+* so .pstb T must equal .stb T and tools/pstbsens.py dT/dp must equal the .stb sens= adjoint dT/dp.
+* Vprobe is a plain top-level DC 0 V source (the .pstb probe trap, docs/pss-pac.md).
+* R1d five-transistor OTA follower (as sens_r1d_native.cir) with parameters that MOVE the
+* bias point, for the bias-point term of .stb sens= (card #595, 2026-10-11): the tail bias
+* current Ib, and two model parameters of M2, which has a model of its own (nch2, the same
+* values as nch) so that a model parameter belongs to exactly one instance: vto (moves the
+* bias) and cbd (a junction capacitance -- charge only, does not move the bias, but is
+* computed in the device's DC load, which the card #475 stamp difference did not re-run).
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.model nch2 nmos level=1 vto={m2vto} kp=200u lambda=0.05 cgso=0.3n cgdo=0.3n cbd={m2cbd} cbs=10f
+.model pch pmos level=1 vto=-0.6 kp=80u lambda=0.08 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.param cl_val=2p m2w=20u ib_val=20u m2vto=0.6 m2cbd=10f
+Vdd vdd 0 DC 3.3
+Vin inp 0 DC 1.5 AC 0
+Ib vdd bias DC {ib_val}
+M5b bias bias 0 0 nch w=10u l=1u
+M5 tail bias 0 0 nch w=20u l=1u
+M1 d1 inp tail 0 nch w=20u l=1u
+M2 out inn tail 0 nch2 w={m2w} l=1u
+M3 d1 d1 vdd vdd pch w=20u l=1u
+M4 out d1 vdd vdd pch w=20u l=1u
+CL out 0 {cl_val}
+Vprobe inn out DC 0
+Vclk clk 0 PULSE(0 1 0 1n 1n 0.5u 1u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 100p
+.pstb 1meg 0 clkgnd 1000 1 5 0.001 dec 200 5e6 1e8 probe="Vprobe" method="shoot" pacpoints=200000
+.end

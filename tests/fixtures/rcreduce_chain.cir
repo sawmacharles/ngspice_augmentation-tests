@@ -1,0 +1,32 @@
+* tests/fixtures/rcreduce_chain.cir -- rcreduce.py validation fixture
+* (ngspice_augmentation card #506, round 8, candidate 1). A four-resistor
+* series run of pure-R internal nodes, no caps (exact series-merge
+* territory), feeding a 3-way star junction (also pure-R, degree 4 --
+* exact general Kron/star-mesh territory, not just series) that fans
+* out into three RC leaves, each with its own load resistor and cap --
+* those stay, they are NOT zero-capacitance. Deliberately does not spell
+* the internal node names out in this header comment (rcreduce.py's own
+* whole-file protected-node scan would otherwise flag them as referenced
+* outside their element lines and refuse to touch them -- see this
+* fixture's own use in tests/test_rcreduce.py). Not derived from any
+* real deck -- a synthetic minimal fixture for this tool only.
+V1 in 0 DC 5
+Rin in ndA 100
+Ra ndA ndB 200
+Rb ndB ndC 150
+Rc ndC hubnd 50
+Rhub1 hubnd out1 300
+Rhub2 hubnd out2 400
+Rhub3 hubnd out3 500
+Rload1 out1 0 1k
+Rload2 out2 0 2k
+Rload3 out3 0 3k
+Cout1 out1 0 1u
+Cout2 out2 0 1u
+Cout3 out3 0 1u
+.tran 1u 200u
+.control
+run
+print v(out1) v(out2) v(out3)
+.endc
+.end

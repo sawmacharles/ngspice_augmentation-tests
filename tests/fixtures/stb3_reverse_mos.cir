@@ -1,0 +1,23 @@
+* stb3_reverse_mos -- device-mode .stb probe on a MOS1 instance biased in
+* REVERSE mode (Vds_netlist < 0), card #460 task 3. Physically the SAME
+* common-source stage as tests/fixtures/stbdev_cs_cgd.cir (Rd pull-up on
+* the physical drain, small Rs on the physical source, a discrete Cgd
+* giving a local loop) -- only the ORDER of the drain/source terminals on
+* the M1 line is swapped relative to that fixture, so the netlist calls
+* the Rs/grounded node "drain" (netlist position 1) and the Rd/Vdd node
+* "source" (netlist position 3). MOS1's own Vds = V(netlist drain) -
+* V(netlist source) then comes out negative at the real DC operating
+* point, so MOS1mode<0 and stb_mos1_probe()'s reverse-mode
+* dNodePrime/sNodePrime exchange (src/spicelib/analysis/stban.c) is
+* exercised for real, not just documented.
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05
++ cgso=0 cgdo=0 cgbo=0 cbd=0 cbs=0
+Vdd vdd 0 DC 3.3
+Vin g 0 DC 1.0 AC 0
+Rg g gg 1k
+* M1 <netlist drain = physical source, via Rs> <gate> <netlist source = physical drain, via Rd> <bulk>
+M1 ps gg pd 0 nch w=20u l=1u
+Rs ps 0 10
+Rd vdd pd 3k
+Cgd gg pd 1n
+.end

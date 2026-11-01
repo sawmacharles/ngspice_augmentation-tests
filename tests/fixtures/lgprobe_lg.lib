@@ -1,0 +1,29 @@
+* lgprobe_lg.lib -- three-terminal loop-gain probe for validating native
+* .stb's localgnd= (ngspice_augmentation, card #457, 2026-09-28)
+*
+* A local copy of stb/lgprobe.lib (card #451) with ONE change: the current-
+* injection source Ii returns to a third pin "lg" instead of true ground 0,
+* mirroring what Spectre's stb documents for localgnd= (research/
+* cadence-stb-pstb.md sec 1: "the current injection returns to localgnd
+* instead of global ground") and what src/spicelib/analysis/stban.c's
+* localgnd= wiring does in the native analysis (patches-wip/stb2/README.md):
+* an extra -1 term at the localgnd node's RHS row, alongside the existing
+* +1 at the probe's node_b, i.e. exactly a unit current source FROM lg TO
+* node_b -- the same direction SPICE's "Ixxx n1 n2" convention gives for
+* "Ii lg x" below (current pulled from n1=lg, delivered to n2=x).
+*
+* Internal names (Ii, Vi, Vb, x) are kept IDENTICAL to lgprobe.lib on
+* purpose, so tools/stb.py's existing run() control-block (which reads/
+* alters @v.<inst>.vi, @i.<inst>.ii, v(<inst>.x)) works unchanged against
+* this subckt too -- see tests/test_stb_native2.py's run_lg_probe(), a
+* local adaptation of tools.stb.run() for the extra "lg" pin (not a change
+* to tools/stb.py itself, which this card may not edit).
+*
+* Orientation unchanged from lgprobe.lib: a = downstream, b = upstream.
+* With lg tied to a=b's own true ground (lg=0), this subckt is electrically
+* identical to lgprobe.lib -- used to confirm localgnd=0 is a no-op.
+.subckt lgprobe_lg a b lg
+Ii lg x DC 0 AC 0
+Vi x a DC 0 AC 1
+Vb b x DC 0
+.ends lgprobe_lg

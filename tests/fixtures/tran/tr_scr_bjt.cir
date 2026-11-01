@@ -1,0 +1,16 @@
+* tr_scr_bjt -- thyristor (SCR) made of a PNP and an NPN BJT: a gate pulse fires it, the anode supply dips below the holding current to turn it off, a second gate pulse refires it: regenerative latch-up and drop-out
+* stock: completes at default settings
+* probe: v(a) v(k) v(g2)
+.model qn NPN(IS=1e-15 BF=120 BR=3 VAF=80 CJE=1p CJC=0.8p TF=0.3n TR=5n RB=50 RC=5 RE=1)
+.model qp PNP(IS=1e-15 BF=60 BR=2 VAF=50 CJE=1p CJC=0.8p TF=0.5n TR=10n RB=50)
+Va va 0 PWL(0 20 150u 20 200u 0.2 300u 0.2 350u 20 600u 20)
+Ra va a 100
+Qp g2 g1 a qp
+Qn g1 g2 k qn
+Rk k 0 50
+Rb1 a g1 100k
+Rb2 g2 k 10k
+Vgate gt 0 PULSE(0 5 20u 100n 100n 5u 400u)
+Rg gt g2 1k
+.tran 100n 600u
+.end

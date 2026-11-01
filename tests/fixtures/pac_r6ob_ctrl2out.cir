@@ -1,0 +1,36 @@
+* pac_r6ob_ctrl2out (card #544: R6o with a BSIM4 (capmod 2) source-follower control path, model charges on an ideal-switch orbit); (Cg = 2 pF native on the gate, so the PSS state set holds the slow gate node and BSIM4 charges are ~25 % of it); derived from pac_r6o_ctrl2out.cir -- open-loop ideal-switch PWM buck (see
+* pss_r6o_shoot.cir's header for why this topology), Vctrl now carries
+* DC {vctrl_dc} AC 1 for a `.pac`/`.pstb`-style control-to-output sweep
+* harness (test_pac.py-style: no .control block, body only). Card #494
+* (plan T6.1, saltation) baseline-failure fixture.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param vramp=2 vctrl_dc=0.55
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+
+Shs vin sw ctrlnode ramp SWMOD
+Sls sw 0   ramp ctrlnode SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+.model nsf nmos level=54 version=4.8.2 mobmod=0 capmod=2 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0 toxe=3e-9 toxp=3e-9 toxm=3e-9 vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6 u0=300 vsat=1.1e5 cgso=2e-10 cgdo=2e-10 cgbo=1e-11 cgsl=1e-10 cgdl=1e-10 cf=1e-10 xpart=0
+.param vg_dc=1.2163
+Vsup vsup 0 DC 3
+Vctrl ctrlg 0 DC {vg_dc} AC 1
+Rgs ctrlg g 1Meg
+Msf vsup g ctrlnode 0 nsf w=100u l=0.5u as=1e-10 ad=1e-10 ps=2e-4 pd=2e-4
+Cg g 0 2p
+Ibias ctrlnode 0 DC 100u
+
+.end

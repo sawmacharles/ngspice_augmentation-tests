@@ -1,0 +1,12 @@
+* pac_vdmos_qs.cir -- card #590: a VDMOS common-source stage biased in quasi-saturation (rq, vq), with an unrelated clock so a
+* period exists.  td .pac must equal .ac; before patch 0132 the transient Jacobian lacked d(I_Rd)/d(V(d)-V(s)) and td .pac was 3.9 dB low.
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+Vdd vdd 0 DC 12
+Rl vdd d 2
+Vg g 0 DC 6 AC 1
+M1 d g 0 PWR
+.model PWR VDMOS(vto=3 kp=20 rd=0.05 rs=0.01 rg=1 rq=0.5 vq=2 cgdmax=1n cgdmin=50p cgs=1n cjo=300p lambda=0.02)
+
+.end

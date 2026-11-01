@@ -1,0 +1,28 @@
+* Linear chopper + LC filter with a slow envelope (ngspice_augmentation,
+* card #513, implicit envelope following, 2026-09-29; copied here from
+* patches-wip/env/fixtures for the card #719 tests)
+*
+* The clean-physics validation deck for `.tranenv`: an ideal chopper
+* Bsw = V(env)*V(clk) (clk = 500 kHz, 40 % duty, 1 ns edges) feeds an LC
+* low-pass (10 uH, 100 uF, 1 ohm load).  V(env) is a slow soft-start ramp
+* 0 -> 12 V over 2 ms (1000 periods), held for 2 ms more.  The circuit is
+* linear, so the time-domain reference is discretisation-insensitive
+* (the comparator/tanh-switch decks env_r3d_softstart.cir and
+* env_openloop_buck.cir differ by several percent between 2n and 5n at the
+* default reltol 1e-3; card #719 found that this is the reltol, not the
+* step: at reltol 1e-6 2n and 1n agree to 0.005 % in vout), and the
+* envelope (the LC response to the ramp) is smooth: the fair place to
+* measure what an implicit envelope step gains and how accurate it is.
+* Two 200 us-time-constant-scale LC modes: the LC resonance (5 kHz, ~100
+* periods) is what limits M.
+.param fs=500k tclk={1/fs}
+Vclk clk 0 PULSE(0 1 0 1n 1n {0.4*tclk} {tclk})
+Venv env 0 PWL(0 0 2m 12 4m 12)
+Bsw sw 0 V = V(env)*V(clk)
+L1 sw swl 10u IC=0
+Rdcr swl vout 20m
+Resr vout cx 10m
+Cout cx 0 100u IC=0
+Rload vout 0 1
+.tran 2n 4m 0 uic
+.end

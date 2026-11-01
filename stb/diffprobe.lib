@@ -1,0 +1,69 @@
+* diffprobe.lib -- differential / common-mode loop-gain probe (ngspice_augmentation,
+* card #451 subtask 2.2.4, 2026-09-27)
+*
+* Spectre's diffprobe (research/cadence-stb-pstb.md §1) is two iprobe branches
+* coupled by a vcvs/pcccs pair whose gain is altered to -1 (differential mode) or
+* +1 (common mode) before running stb on the branch-1 probe. ngspice-45.2 can alter
+* a device's acmag with `alter @dev[acmag]=...` (used throughout lgprobe.lib /
+* tools/stb.py already) but there is no equally simple way to alter a live E/F
+* source's gain parameter mid-run without `alterparam` + `reset`, which would
+* throw away the operating point set up by the leading `op` and complicate the
+* two-injection flow in tools/stb.run(). So this file takes the task's other
+* offered option: two separate subcircuit variants, diffprobe_dm and diffprobe_cm,
+* selected at deck-preparation time (see tools/stb.select_diff_mode()), not at
+* simulation time.
+*
+* Structure: two lgprobe-like branches.
+*   branch 1 (a1/b1): the read probe -- Ii1/Vi1/Vb1, identical to stb/lgprobe.lib.
+*     tools/stb.py injects and reads ONLY this branch (v(p.x1), i(v.p.vi1),
+*     i(v.p.vb1), v(a1)), with the same Tian formula as the single-ended case.
+*   branch 2 (a2/b2): a second, independently-sourced but correlated branch. Its
+*     Ii2/Vi2 are driven with the same acmag as branch 1's Ii1/Vi1 (tools/stb.py
+*     alters both pairs together) but at a fixed AC phase baked in here: 0 deg
+*     (in phase) for diffprobe_cm, 180 deg (antiphase) for diffprobe_dm. A source
+*     at acmag=1 acphase=180 is exactly -1 * (acmag=1 acphase=0) in a linear AC
+*     analysis, so this reproduces Spectre's "gain=-1 for DM, gain=+1 for CM"
+*     without needing a live gain alter. `alter` only ever touches acmag here, so
+*     the baked-in acphase survives every alter, exactly as branch 1's does.
+*
+* Why reading branch 1 alone is enough: for a network that is exactly symmetric
+* between its p (branch-1-attached) and n (branch-2-attached) halves, a purely
+* antisymmetric (DM) or purely symmetric (CM) excitation makes the whole
+* network's response antisymmetric or symmetric too. T is a ratio of the same
+* excitation on both sides of the fraction, so reading it at one symmetric point
+* (branch 1) gives exactly the DM or CM loop gain of the whole coupled network --
+* this is the standard differential/common-mode half-circuit theorem, and it is
+* exact (not approximate) for an exactly symmetric linear circuit. See the
+* stb_diff checks in tests/test_stb.py, which compare against the DM and CM
+* half circuits built directly from that theorem.
+*
+* Both branches are a DC short (Vb1, Vb2 are 0 V), same as lgprobe, so the
+* operating point is the closed-loop one on both wires.
+*
+* Orientation, per wire, matches lgprobe.lib: a = downstream (the side the loop
+* signal travels to), b = upstream (the side it comes from). Both wires of a
+* differential/CM loop must be broken with the same downstream/upstream sense
+* for the DM and CM correlation (in-phase / antiphase) to mean what it says.
+*
+* A deck that instantiates the generic subckt name "diffprobe" (the marker
+* tools/stb.select_diff_mode() rewrites) without going through tools/stb.py's
+* --mode dm|cm will fail to elaborate: there is no subckt literally named
+* "diffprobe" in this file, on purpose, so there is no silent default mode.
+
+.subckt diffprobe_dm a1 b1 a2 b2
+Ii1 0 x1 DC 0 AC 0 0
+Vi1 x1 a1 DC 0 AC 1 0
+Vb1 b1 x1 DC 0
+Ii2 0 x2 DC 0 AC 0 180
+Vi2 x2 a2 DC 0 AC 1 180
+Vb2 b2 x2 DC 0
+.ends diffprobe_dm
+
+.subckt diffprobe_cm a1 b1 a2 b2
+Ii1 0 x1 DC 0 AC 0 0
+Vi1 x1 a1 DC 0 AC 1 0
+Vb1 b1 x1 DC 0
+Ii2 0 x2 DC 0 AC 0 0
+Vi2 x2 a2 DC 0 AC 1 0
+Vb2 b2 x2 DC 0
+.ends diffprobe_cm

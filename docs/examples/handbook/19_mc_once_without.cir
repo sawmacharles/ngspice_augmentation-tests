@@ -1,0 +1,24 @@
+* 19_mc_once_without.cir -- demonstrates the DEFAULT ngspice .param
+* re-evaluation-per-reference behaviour (docs/mc.md, "Finding 1"):
+* a .param whose RHS calls a random function (agauss/gauss/aunif/unif/
+* limit) is NOT bound once at declaration -- it is textually rewritten
+* into a .func and re-inlined (hence redrawn) at EVERY reference,
+* including through a plain copy (.param b = a). R1 and R2 both derive
+* from the SAME declared "a", via DIFFERENT copies "b"/"c" -- if .param
+* bound a value once (what every other SPICE dialect's documentation
+* implies), R1 and R2 would read back identical. They do not.
+* Companion: 19_mc_once_with.cir (once(), same seed) -- R1 and R2 DO
+* read back identical there.
+.option seed=1
+.param a = agauss(0,10m,3)
+.param b = {a}
+.param c = {a}
+R1 1 0 '1000*(1+b)'
+R2 2 0 '1000*(1+c)'
+V1 1 0 DC 1
+V2 2 0 DC 1
+.control
+op
+print @r1[resistance] @r2[resistance]
+.endc
+.end

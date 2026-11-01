@@ -1,0 +1,18 @@
+* pnoise_m1buck.cir -- card #556: open-loop CCM buck, MOS1 high-side switch (gate-driven, Meyer-free overlap caps) + freewheel diode,
+* fs 100 kHz, D 0.5, 100 ns edges; every device noisy (M1 channel thermal, D1 shot, Rl/Resr/Rload thermal).  Independent reference:
+* tools/pnoise_mc_mos.py (trnoise-driven B-sources with the instantaneous MOS1/diode density, boxcar + Welch ensemble).
+.param fs=100k trs=100n
+Vin vin 0 DC 5
+.model nsw nmos level=1 vto=1 kp=2e-3 gamma=0 lambda=0 phi=0.65 tox=5e-8 cgso=1e-10 cgdo=1e-10 cgbo=0 cj=0 kf=0
+.model dm d is=1e-9 n=1 rs=0 cj=0 tt=0
+M1 vin gh sw 0 nsw w=100u l=1u
+Vgh gh 0 PULSE(0 10 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+D1 0 sw dm
+Csw sw 0 200p
+L1 sw lx 22u
+Rl lx out 50m
+Cout out cx 10u
+Resr cx 0 100m
+Rload out 0 2.2
+.options reltol=1e-4
+.end

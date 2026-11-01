@@ -1,0 +1,60 @@
+* tests/fixtures/reset_temp_probe.cir -- card #492 minimal reproducer.
+*
+* Isolates the state-leak-across-reset root cause found while chasing card
+* #491's PVT-loop finding (docs/campaign.md, mode (b) section): an
+* interactive 'option temp = X' followed by 'reset' silently reverts the
+* circuit's operating temperature to ngspice's CKTnewTask() hard-coded
+* default (300.15K / 27C) instead of X, with no error or warning.
+* research/reset-leak.md has the full trace (which frontend structure gets
+* freed and why the replacement circuit's ci_vars starts empty).
+*
+* This deck has nothing switching, nothing temperature-sensitive in its own
+* right -- it exists purely to read back a device's OWN operating
+* temperature (@d1[temp], an ngspice instance-parameter query) after each
+* step, which is a direct, unambiguous readout of whether TSKtemp/CKTtemp
+* actually took the requested value or silently fell back to the default.
+* tests/test_reset.py parses the '@d1[temp] = ...' lines this deck prints
+* and checks them against what each step SHOULD have produced.
+*
+* Do not hand-edit the sequence of steps without also updating
+* tests/test_reset.py's PROBE_EXPECTED (it indexes these prints by order).
+D1 a 0 ddt
+R1 a 0 1k
+.model ddt D(IS=1e-6 N=1.0)
+.control
+* step 0: default circuit temperature (27C, TNOM default)
+op
+print @d1[temp]
+* step 1: 'option temp=85' with NO reset in between -- must take effect
+*  immediately (this step is not the bug; it is the control showing the
+*  'option' command itself works on a live circuit).
+option temp = 85
+op
+print @d1[temp]
+* step 2: 'option temp=85' + 'reset' -- THE bug. On an unfixed ngspice,
+*  this prints 27 (the default), not 85: com_remcirc() (called by 'reset')
+*  frees ft_curckt->ci_vars, which is where the 'option temp=85' setting
+*  above was cached for inp_dodeck()'s replay-onto-the-next-load loop, and
+*  the freshly rebuilt circuit's ci_vars starts empty, so the replay never
+*  happens.
+option temp = 85
+reset
+op
+print @d1[temp]
+* step 3: same, negative temperature, to rule out a sign-handling
+*  coincidence at a positive-only default path.
+option temp = -20
+reset
+op
+print @d1[temp]
+* step 4: two resets in a row with an 'option temp=' before each -- must
+*  not leak point 3's temp (-20) into point 4's op if the fix is only
+*  papering over a first-reset special case.
+option temp = 85
+reset
+option temp = -20
+reset
+op
+print @d1[temp]
+.endc
+.end

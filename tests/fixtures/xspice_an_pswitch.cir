@@ -1,0 +1,7 @@
+* xspice_an_pswitch: XSPICE code model 'pswitch' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+A1 %gd(c 0) %gd(in o1) m
+Vc c 0 DC 1.0
+.model m pswitch(cntl_off=0.2 cntl_on=0.8 r_off=1e6 r_on=100 log=FALSE)
+Rl o1 out 1k
+Co out 0 100p

@@ -1,0 +1,22 @@
+* R1b two-stage Miller amplifier with a reverse path, gain of 2 -- NATIVE .stb probe
+* variant of refs/r1b_bilateral.cir for adjoint sensitivity (card #475, plan T10.7,
+* 2026-09-29). Same topology/values as refs/r1b_bilateral.cir; the lgprobe.lib
+* subcircuit (a system-ngspice-compatible script-tool probe) is replaced by a plain
+* 0V V-source in series with the same wire (native .stb's own probe convention --
+* docs/stb.md's example (b)), so this deck needs no .include and runs on the
+* private-fork native .stb build only.
+.param gm1=1m r1o=1Meg c1=0.2p gm2=5m r2o=50k cc=1p ro1=20k ro2=20k cl=5p cin=0.5p cf=0.1p
+Vp vp 0 DC 0 AC 0
+G1 n1 0 vp vn {gm1}
+R1o n1 0 {r1o}
+C1 n1 0 {c1}
+G2 oa 0 n1 0 {gm2}
+R2o oa 0 {r2o}
+Cc n1 oa {cc}
+Vprobe ol oa DC 0
+CL ol 0 {cl}
+Rf1 ol vn {ro1}
+Rf2 vn 0 {ro2}
+Cin vn 0 {cin}
+Cf vn n1 {cf}
+.end

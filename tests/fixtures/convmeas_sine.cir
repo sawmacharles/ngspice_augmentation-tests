@@ -1,0 +1,24 @@
+* convmeas_sine.cir -- a plain SIN() source, for tools/convmeas.py's
+* ripple_pp() check against a hand-computed answer (card #497, feature-
+* survey #16: "check each against hand-computed values on small synthetic
+* fixtures (e.g. a PWL/sine source with known answers)"). SIN(VO VA FREQ)
+* with TD=0 is the pure sinusoid from t=0 (no startup transient to wait
+* out), so ripple pk-pk over ANY window of one or more full periods is
+* exactly 2*VA regardless of window placement.
+*
+* voffset=2.5 vamp=0.6 freq=10k -> ripple_pp = 2*0.6 = 1.2 V exactly
+* (limited only by the .tran sampling resolution, tstep << 1/freq below).
+*
+* Run: ngspice -b convmeas_sine.cir
+
+.param voffset=2.5 vamp=0.6 freq=10k
+
+Vtest sig 0 SIN({voffset} {vamp} {freq})
+Rsig sig 0 1k
+
+.control
+tran 10n 500u 0 uic
+write ~/Work/data/ngspice_augmentation/convmeas/fixture-standalone/convmeas_sine.raw
+wrdata ~/Work/data/ngspice_augmentation/convmeas/fixture-standalone/convmeas_sine.txt v(sig)
+.endc
+.end

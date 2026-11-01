@@ -1,0 +1,22 @@
+* R1a unilateral amplifier PLUS a large-signal periodic disturbance unrelated to the probe
+* (ngspice_augmentation, card #452, 2026-09-27, red-proof fixture for tools/fra.py).
+* Same topology and .param values as refs/r1a_unilateral.cir (owned by another worker; do
+* not merge with it). Ibig injects a fixed, non-swept-frequency large sine into node o,
+* about 1000x the typical FRA injection amplitude and at a frequency incommensurate with
+* any FRA measurement window used in tests/test_fra.py, so that skipping the
+* perturbed-minus-unperturbed subtraction (or measuring before it settles) leaks badly
+* into the extracted sideband-0 component. tools/fra.py must subtract the unperturbed run
+* (which also contains Ibig, unaffected by the probe) to reject it; this deck exists only
+* to prove that check can fail.
+.param gm=10m ro=100k co=10p r1=100k r2=100k cn=2p
+.include ../../stb/lgprobe.lib
+Vp vp 0 DC 0 AC 0
+G1 0 o vp vn {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+Ibig o 0 SIN(0 10u 137013.7 0 0 0)
+R1 o fb {r1}
+R2 fb 0 {r2}
+XP fb vn lgprobe
+Cn vn 0 {cn}
+.end

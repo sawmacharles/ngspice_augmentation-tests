@@ -1,0 +1,90 @@
+* R2 switched-RC LPTV circuit (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r2_switched_rc.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r2_switched_rc/)
+*
+* Single state x = v(vx). Vin drives vx through Rin; a capacitor C sits on vx;
+* a clocked switch additionally ties vx to ground through Rsw for the first
+* duty*T of every clock period T (switch closed), and leaves vx driven only
+* through Rin for the rest of the period (switch open, idealised: Ron<<Rin,
+* Roff>>Rin so the analytic model below can treat "open" as truly open).
+* This is a genuine scalar LPTV system (two constant-coefficient intervals per
+* period), not just an RC low-pass with an averaged duty-cycle-scaled resistor:
+* the exact response differs from the averaged one at frequencies approaching
+* fclk, which is the point of this reference (T5.1 pac_sb0 checks against it).
+*
+* ANALYTIC SIDEBAND-0 TRANSFER FUNCTION G0(omega) = Vx(omega)/Vin(omega) at the
+* SAME frequency as the excitation (the k=0 term of the LPTV response, i.e.
+* what an FRA/PAC measurement reports), exact, not averaged:
+*
+*   dx/dt = A1 x + B1 u   for 0     <= t < D*T   (switch closed)
+*         = A2 x + B2 u   for D*T   <= t < T     (switch open)
+*   A1 = -(1/Rin + 1/Rsw)/C,  B1 = 1/(Rin*C)
+*   A2 = -1/(Rin*C),          B2 = 1/(Rin*C)
+*   u(t) = exp(j*omega*t)
+*
+* Exact propagation over an interval [t0,t1] with constant (A,B):
+*   x(t1) = exp(A*(t1-t0))*x(t0) + B/(j*omega-A) * [exp(j*omega*t1) - exp(A*(t1-t0))*exp(j*omega*t0)]
+*
+* Periodic-steady-state closure (LPTV forced at omega, T-periodic circuit):
+*   x(T) = exp(j*omega*T) * x(0)
+* Propagating x(0) through the closed interval then the open interval gives
+* x(T) = a_total*x(0) + b_total (affine, a_total/b_total closed-form products
+* of the two interval propagations); solving x(T)=exp(j*omega*T)*x(0) for x(0)
+* is one complex linear equation -- exact, no averaging. Then
+*   G0(omega) = (1/T) * integral_0^T x(t)*exp(-j*omega*t) dt
+* evaluated in closed form per interval and summed (the other sidebands, at
+* omega + k*2*pi*fclk, are the k != 0 terms of the same integral and are
+* dropped here, matching the plan's sideband-0 scope).
+*
+* refs/r2_analytic.py implements this exactly (function g0()) and self-checks
+* it against a brute-force fixed-step propagation run to periodic steady state
+* (--selftest): closed form vs brute force agree to ~3e-11 relative from
+* 100 Hz to 49.9 kHz (just under fclk/2), checked 2026-09-27.
+*
+* AC source: Vin carries DC 1 (exercised by this .tran, to give a live,
+* non-microvolt, measurable steady-state average and ripple) and AC 1
+* (marked for later small-signal/PAC injection by T5.1 work; not used by
+* this transient run, which has no time-domain AC content on Vin).
+*
+* Idealisation: Ron=1e-4 (<<10 Ohm..10k), Roff=1e9 (>>10k) so the switch is
+* effectively ideal relative to Rin=Rsw=10k; the analytic model above has no
+* Ron/Roff terms. Switch drive has 1 ns edges (<<T=10us) so the "instant
+* transition" assumption in the analytic model is a good match.
+*
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table): fclk measured 100.000 kHz (t_period=1.000000e-05 s) vs 100 kHz
+* param -- switch edges are live. duty measured (pulse width/period) =
+* 0.5001 vs 0.5 param. v(vx) steady-state average (last period, 590-600us) =
+* 6.699138e-01 V, ripple (max-min, same window) = 1.600631e-01 V -- not
+* microvolts, not flat: the switching is visibly modulating the state
+* (V-G7). Settling: period-10 average (90-100us) = 6.699133e-01 V, period-30
+* average (290-300us) = 6.699052e-01 V, period-59 average (590-600us) =
+* 6.699138e-01 V -- agree to ~1e-5 relative, i.e. settled well inside 10
+* periods (100us) for this DC excitation; runtime 0.13 s (see README).
+* Cross-check: refs/r2_analytic.py's g0() at f=1e-6 Hz (near-DC limit) gives
+* 6.699608e-01 (real part; imaginary part ~3e-11, i.e. ~0), matching the
+* measured DC-input average to ~7e-5 relative (about 4-5 significant
+* figures) -- an independent check that the closed-form G0 recipe above is
+* not just internally self-consistent (the --selftest brute-force check)
+* but also agrees with the real simulator at the one frequency (omega->0)
+* where a plain .tran DC run can check it without needing the AC injection
+* that Phase 2/5 tooling will add later. The residual ~7e-5 mismatch is
+* attributed to the switch's finite Ron/Roff and 1ns edges (idealised away
+* in the analytic model) and the fixed 25ns .tran step, not to an error in
+* the recipe (the --selftest agrees to ~3e-11 against a brute-force
+* propagation that shares the same idealisation).
+.param rin=10k rsw=10k c=1n fclk=100k duty=0.5
+.param per={1/fclk}
+Vin vin 0 DC 1 AC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx sw1 {rsw}
+Sswitch sw1 0 clk 0 SWCLK
+.model SWCLK SW(vt=0.5 vh=0.05 ron=1e-4 roff=1e9)
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*per} {per})
+.control
+set filetype=ascii
+pss 100e3 100e-6 vx 200 10 25 1e-6 uic method=shoot
+write ~/Work/data/ngspice_augmentation/pss/r2_switched_rc/r2_shoot.raw
+wrdata ~/Work/data/ngspice_augmentation/pss/r2_switched_rc/r2_shoot.txt v(vx) v(clk)
+.endc
+.end

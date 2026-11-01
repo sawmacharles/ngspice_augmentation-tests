@@ -1,0 +1,14 @@
+* xspice_dig_dsample: comparator + d_dff sample-and-hold of a 250 kHz sine at 1 MHz: the held bit at t=0 is the previous period's, not the ic (card #551 red proof of the hidden-state restore)
+Vclk clk 0 PULSE(0 1 0 5n 5n 495n 1u)
+Vsig sig 0 SIN(0.5 0.4 250k 0 0 -90)
+Vone one 0 DC 1
+Vzero zero 0 DC 0
+Abr [clk one zero sig] [dclk dhi dlo dsg] adc1
+.model adc1 adc_bridge(in_low=0.49 in_high=0.51)
+Add dsg dclk dlo dlo dq dqn mdf
+.model mdf d_dff(clk_delay=2n set_delay=1n reset_delay=1n ic=0)
+Abo [dq] [a0] dac1
+Rd0 a0 out 1k
+.model dac1 dac_bridge(out_low=0 out_high=1 t_rise=50n t_fall=50n)
+Co out 0 100p
+Rl out 0 10k

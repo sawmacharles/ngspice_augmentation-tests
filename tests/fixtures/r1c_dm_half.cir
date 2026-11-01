@@ -1,0 +1,35 @@
+* R1c DM half circuit (ngspice_augmentation, card #451 subtask 2.2.4, 2026-09-27;
+* NEGATIVE-FEEDBACK POLARITY FIXED card #464, 2026-09-28 -- see refs/r1c_fully_diff.cir's
+* header for the bug (found by the parent, 2026-09-29): the original G1p/G1n control-node
+* order gave POSITIVE DM feedback (T(1Hz) = -12.9). Fix: swap each VCCS's control-node
+* order, which flips the sign of the current it injects without touching gm1 or any pole.
+* This file's G1 line is swapped the same way, so it derives from the FIXED circuit.
+* Derived from refs/r1c_fully_diff.cir by the differential half-circuit theorem:
+* enforce outn=-outp, outnfb=-outpfb, vfbn=-vfbp, and vcs=vcmfb=0 (all true by
+* symmetry under pure DM excitation, since G1's core response to a common
+* vfbp/vfbn input is exactly zero, so the CMFB path carries no DM signal at
+* all).
+*   Using ngspice's G-element convention (Gxxx n+ n- nc+ nc-: current injected
+*   at n+ = -value*(V(nc+)-V(nc-)), verified empirically 2026-09-28 -- see
+*   card #464 notes), G1p's fixed line "outp 0 vfbp vfbn {gm1}" injects
+*   -gm1*(vfbp-vfbn) into outp. Under DM, vfbn=-vfbp, so that is
+*   -gm1*(vfbp-(-vfbp)) = -2*gm1*vfbp: negative feedback (outp rising makes
+*   vfbp rise, which now REDUCES the current pumped into outp).
+*   Modelled here as a single VCCS of gain 2*gm1 with control terminals
+*   (vfbp, 0) -- injected = -2*gm1*(vfbp-0) = -2*gm1*vfbp, matching.
+*   Rsp (outpfb -> vcs) becomes a plain resistor to true ground: KCL at vcs
+*   forces vcs = (outpfb+outnfb)/2 = 0 under DM regardless of rsense, but
+*   nonzero current still flows from outpfb into it (-outpfb/rsense), i.e. Rsp
+*   behaves exactly like a resistor rsense from outpfb to ground.
+* Independent reference for the "DM loop gain vs half-circuit equivalent" check
+* in tests/test_stb.py (stb_diff spec row).
+.param gm1=10m ro=200k co=5p rf=99k rin=1k rsense=2Meg
+.include ../../stb/lgprobe.lib
+G1 outp 0 vfbp 0 {2*gm1}
+Ro outp 0 {ro}
+Co outp 0 {co}
+XP outpfb outp lgprobe
+Rf outpfb vfbp {rf}
+Rin vfbp 0 {rin}
+Rsense outpfb 0 {rsense}
+.end

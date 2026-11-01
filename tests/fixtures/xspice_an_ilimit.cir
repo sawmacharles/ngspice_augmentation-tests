@@ -1,0 +1,7 @@
+* xspice_an_ilimit: XSPICE code model 'ilimit' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+Vpp pp 0 3
+A1 in pp 0 o1 m
+.model m ilimit(gain=1 r_out_source=100 r_out_sink=100 i_limit_source=1m i_limit_sink=1m v_pwr_range=0.5 i_source_range=1u)
+Rl o1 out 1k
+Co out 0 100p

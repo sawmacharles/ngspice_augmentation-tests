@@ -1,0 +1,15 @@
+* xspice_dig_tff: digital/hybrid XSPICE models under .pss (card #551); STATEFILE is replaced by the test
+Vclk clk 0 PULSE(0 1 0 5n 5n 495n 1u)
+Vone one 0 DC 1
+Vzero zero 0 DC 0
+Abr [clk one zero] [dclk dhi dlo] adc1
+.model adc1 adc_bridge(in_low=0.3 in_high=0.7)
+At1 dhi dclk dlo dlo dq1 dq1n tf
+At2 dhi dq1n dlo dlo dq2 dq2n tf
+.model tf d_tff(clk_delay=1n set_delay=1n reset_delay=1n ic=0)
+Abo [dq2 dq1] [a0 a1] dac1
+Rd0 a0 out 1k
+Rd1 a1 out 2k
+.model dac1 dac_bridge(out_low=0 out_high=1 t_rise=50n t_fall=50n)
+Co out 0 100p
+Rl out 0 10k

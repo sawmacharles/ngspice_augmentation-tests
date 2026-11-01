@@ -1,0 +1,38 @@
+* stb3_bsim4_cgd -- single BSIM4 (level=54) common-source stage with a
+* large discrete Cgd giving a local loop that no wire-break (loop-mode)
+* probe can reach without breaking the gate-drain net itself (Tian
+* applicability case 2, same structure as tests/fixtures/
+* stbdev_cs_cgd.cir's MOS1 version). Minimal plausible INLINE model card
+* (no external model files; version=4.8.2 pinned explicitly -- default
+* resolves the same way per src/spicelib/parser/inpdomod.c, pinned here
+* only to silence the "Version not specified" note), quasi-static
+* (acnqsmod=0, the only mode implemented in stb_bsim4_probe(), src/
+* spicelib/analysis/stban.c) and all the other extra-term flags at their
+* default/simple settings (rdsmod=0 rbodymod=0 rgatemod=0 igcmod=0
+* igbmod=0) so the rank-1 gm-only derivation in stb_bsim4_probe()'s
+* header comment applies cleanly. Body tied to source, both grounded:
+* gmbs=0 here, isolating the pure gm-only case (matches stbdev_cs_cgd.cir's
+* own choice). capmod=0 and every overlap/junction cap zeroed to minimize
+* (not eliminate -- BSIM4's intrinsic channel charge does not reach
+* exactly 0 even with capmod=0) the device's OWN gate/junction
+* capacitance relative to the deliberately large external Cgd, so the
+* fixture's loop is dominated by Cgd (small device, W/L near minimum) --
+* tests/test_stb_followups.py's brute-force reference (independent of
+* stb_bsim4_probe(), same technique as tests/test_stb_device.py's
+* build_brute_lines()) checks this residual is small enough for 1e-6
+* agreement over the fixture's own (moderate) sweep top frequency before
+* trusting the comparison. Card #460 task 2.
+.model nch4 nmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=0.45 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=300 vsat=1.1e5
++ cgso=0 cgdo=0 cgbo=0 cgsl=0 cgdl=0
++ cf=0 cjs=0 cjd=0 cjswd=0 cjswgd=0
+Vdd vdd 0 DC 3.3
+Vin g 0 DC 1.0 AC 0
+Rg g gg 1k
+M1 d gg 0 0 nch4 w=1u l=0.35u
+Rd vdd d 3k
+Cgd gg d 1u
+.end

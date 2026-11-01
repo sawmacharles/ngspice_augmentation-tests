@@ -1,0 +1,9 @@
+* tr_chatter_bsrc_uic -- same sliding-mode comparator loop, started with uic from c=0 (no operating point): chatter at t > 0 instead of in the DC solution
+* stock: FAIL: timestep too small after ~136 points (0.7% of the run): sliding-mode chatter
+* probe: v(c) v(out)
+Bcmp out 0 V = v(c)>0.5 ? 0 : 1
+R1 out c 1k
+C1 c 0 1n
+.ic v(c)=0
+.tran 10n 100u uic
+.end

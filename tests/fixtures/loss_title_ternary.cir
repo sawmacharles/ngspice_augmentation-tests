@@ -1,0 +1,16 @@
+Buck converter with a quoted ternary high-side switch (card #511)
+* card #511 red-proof deck: the title starts with B (used to become a phantom
+* B device, silently), and Bhs uses a quoted ngspice ternary expression
+* (used to raise a Python SyntaxError in loss.py's expression compiler).
+Vin vin 0 DC 12
+Vclk clk 0 PULSE(0 5 0 1n 1n 1u 2u)
+Bhs vin sw I='V(clk) > 2.5 ? (V(vin)-V(sw))/0.05 : 0'
+Rdcr sw swL 0.05
+L1 swL vout 10u
+D1 0 sw DMOD
+.model DMOD D(IS=1e-14 RS=0.02 N=1.05)
+Resr vout voutc 0.01
+Cout voutc 0 100u IC=6
+Rload vout 0 5
+.tran 20n 1.5m 0 uic
+.end

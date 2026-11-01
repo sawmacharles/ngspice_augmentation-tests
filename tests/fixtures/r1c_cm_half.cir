@@ -1,0 +1,35 @@
+* R1c CM half circuit (ngspice_augmentation, card #451 subtask 2.2.4, 2026-09-27;
+* NEGATIVE-FEEDBACK POLARITY FIXED card #464, 2026-09-28 -- see refs/r1c_fully_diff.cir's
+* header for the bug (found by the parent, 2026-09-29): the original Gcmfb control-node
+* order gave POSITIVE CMFB feedback (T(1Hz) = -3333). Fix: swap Gcmfb's control-node
+* order (Gcorrp/Gcorrn are left untouched -- flipping one sign in the loop is enough).
+* This file's Gcmfb line is swapped the same way, so it derives from the FIXED circuit.
+* gmcorr also lowered 1m -> 8u in the fixed circuit (and here) to bring the CM loop's
+* phase margin into a genuine, non-degenerate 30-90 deg range (56.9 deg measured) instead
+* of the near-zero margin an unchanged gmcorr would leave at this loop's now much higher
+* effective crossover frequency; see refs/r1c_fully_diff.cir and docs/stb.md for the numbers.
+* Derived from refs/r1c_fully_diff.cir by the common-mode half-circuit theorem:
+* enforce outn=outp, outnfb=outpfb (true by symmetry under pure CM excitation).
+* G1's core response to a common vfbp/vfbn input is exactly zero
+* (gm1*(vfbn-vfbp) = 0 when vfbp=vfbn), so the DM feedback path (Rf1/Rin1's
+* signal onward to G1) has no effect on the CM loop -- but Rf1 and Rin1 in
+* series (rf+rin) still LOAD outpfb, as a plain resistor to ground, because
+* that current flows regardless of whether it does anything useful downstream;
+* it is kept here as Rfin. Under CM, KCL at vcs (whose only connections are
+* Rsp/Rsn, loaded by nothing else) gives vcs = (outpfb+outnfb)/2 = outpfb with
+* the two branch currents individually zero (both ends at the same potential),
+* i.e. Rsp/Rsn draw no current and contribute no extra loading; Gcmfb is wired
+* straight to outpfb here (with its control terminals swapped -- see above).
+* Independent reference for the "CM loop gain vs half-circuit equivalent" check
+* in tests/test_stb.py (stb_diff spec row).
+.param ro=200k co=5p rf=99k rin=1k gmcmfb=100u rcmfb=500k ccmfb=20p gmcorr=8u
+.include ../../stb/lgprobe.lib
+Gcorr outp 0 vcmfb 0 {gmcorr}
+Ro outp 0 {ro}
+Co outp 0 {co}
+XP outpfb outp lgprobe
+Rfin outpfb 0 {rf+rin}
+Gcmfb vcmfb 0 0 outpfb {gmcmfb}
+Rcmfb vcmfb 0 {rcmfb}
+Ccmfb vcmfb 0 {ccmfb}
+.end

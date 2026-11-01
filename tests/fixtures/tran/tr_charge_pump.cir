@@ -1,0 +1,19 @@
+* tr_charge_pump -- 4-stage Dickson charge pump (diode-capacitor ladder, 1 MHz complementary 5 V clocks, 1 nF stage caps, 100 kOhm load): diode conduction bursts every half cycle, charge pumping to ~15 V
+* stock: completes at default settings
+* probe: v(out) v(n2)
+.model dsch D(IS=1e-8 N=1.05 RS=0.05 CJO=50p TT=5n BV=40 IBV=1m)
+V1 clk 0 PULSE(0 5 0 10n 10n 490n 1u)
+V2 clkb 0 PULSE(5 0 0 10n 10n 490n 1u)
+Vin in 0 DC 5
+D0 in n1 dsch
+C1 n1 clk 1n
+D1 n1 n2 dsch
+C2 n2 clkb 1n
+D2 n2 n3 dsch
+C3 n3 clk 1n
+D3 n3 out dsch
+Co out 0 1n
+RL out 0 100k
+.meas tran vout_end FIND v(out) AT=95u
+.tran 10n 100u
+.end

@@ -1,0 +1,33 @@
+* R1b two-stage Miller amplifier, DETUNED compensation (card #471, plan T10.3, 2026-09-28)
+* Same topology and same feedback network (Rf1/Rf2, gain of 2) as refs/r1b_bilateral.cir
+* (read there, not edited or copied verbatim as a file -- rebuilt here as this task's own
+* fixture, tests/compopt_*.cir per the card's brief). c1 (dominant-pole cap at n1) and cc
+* (Miller pole-splitting cap, n1->oa) are this deck's "compensator": with the values
+* below, native `.stb` on a plain-V-source probe (Vprobe, in place of the lgprobe
+* instance for a run through tools/compopt.py's to_native_probe_deck()) gives
+*   PM = 10.3 deg at fc = 4.45e7 Hz (falling 0 dB crossing), GM = 3.17 dB
+* -- barely stable, the DETUNED starting point tests/test_compopt.py starts its feasible
+* R1b optimization from. tools/compopt.py tunes cc and c1 (bounds cc=1e-13:3e-11:log,
+* c1=1e-14:1e-11:log) to reach fc=7.6e6 Hz, PM=65 deg, which a hand sweep during this
+* card's design found reachable near c1~=0.2p, cc~=10p (PM=66.4 deg @ 7.64e6 Hz) --
+* see docs/compopt.md's worked example for the real optimizer run.
+* Kept in lgprobe form (like refs/r1b_bilateral.cir) so tools/stb.py (stock ngspice) can
+* independently confirm the optimizer's result on the SAME deck text -- compopt.py's
+* to_native_probe_deck() derives the native-.stb plain-probe variant on the fly and never
+* writes a second checked-in copy.
+.param gm1=1m r1o=1Meg c1=0.2p gm2=5m r2o=50k cc=1p ro1=20k ro2=20k cl=5p cin=0.5p cf=0.1p
+.include ../../stb/lgprobe.lib
+Vp vp 0 DC 0 AC 0
+G1 n1 0 vp vn {gm1}
+R1o n1 0 {r1o}
+C1 n1 0 {c1}
+G2 oa 0 n1 0 {gm2}
+R2o oa 0 {r2o}
+Cc n1 oa {cc}
+XP ol oa lgprobe
+CL ol 0 {cl}
+Rf1 ol vn {ro1}
+Rf2 vn 0 {ro2}
+Cin vn 0 {cin}
+Cf vn n1 {cf}
+.end

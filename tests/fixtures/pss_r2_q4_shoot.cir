@@ -1,0 +1,26 @@
+* pss_r2_q4_shoot.cir -- card #498 regression fixture: R2 switched-RC with a
+* 25 kHz shooting period = 4 clock periods (q=4, several source-driven sw
+* events per shooting period, SW vt=0.5 vh=0.05, 100 kHz clock with 1 ns
+* edges). Body identical to refs/r2_switched_rc.cir (see its header for the
+* circuit). Found by tests/test_pac_perturbed.py check (b) (the shared
+* pac_perturbed.py pss backend deck): the card #498 lagged-sw/exact-event-
+* location path first broke this case because the flip step's end time was
+* left unforced, so forced perturbed runs integrated through the flip
+* transient with a different step than the baseline.
+.param rin=10k rsw=10k c=1n fclk=100k duty=0.5
+.param per={1/fclk}
+Vin vin 0 DC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx sw1 {rsw}
+Sswitch sw1 0 clk 0 SWCLK
+.model SWCLK SW(vt=0.5 vh=0.05 ron=1e-4 roff=1e9)
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*per} {per})
+.control
+set filetype=ascii
+set wr_singlescale
+set numdgt=17
+pss 25000.0 0.0001 vx 800 10 200 1e-07 uic method=shoot
+wrdata ~/Work/data/ngspice_augmentation/pss/r2_q4/r2_q4_orbit.txt v(vx)
+.endc
+.end

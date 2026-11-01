@@ -1,0 +1,27 @@
+* tr_ring5_bsim3_l8 -- 5-stage CMOS ring oscillator with BSIM3v3 (LEVEL=8) models (0.35u class, 3.3 V): heavy device evaluation, capacitance model, charge conservation
+* stock: completes at default settings
+* probe: v(n1) v(n3)
+.model nm3 NMOS(LEVEL=8 VERSION=3.3.0 TOX=7.5n VTH0=0.5 U0=400 VSAT=1.2e5 CGSO=2e-10 CGDO=2e-10 CJ=1e-3 CJSW=2e-10 MJ=0.5 MJSW=0.33 PB=0.9 PBSW=0.9 XJ=0.15u NCH=1.7e17)
+.model pm3 PMOS(LEVEL=8 VERSION=3.3.0 TOX=7.5n VTH0=-0.5 U0=130 VSAT=1.0e5 CGSO=2e-10 CGDO=2e-10 CJ=1e-3 CJSW=2e-10 MJ=0.5 MJSW=0.33 PB=0.9 PBSW=0.9 XJ=0.15u NCH=1.7e17)
+
+Vdd vdd 0 DC 3.3
+Mp1 n2 n1 vdd vdd pm3 W=5u L=0.35u
+Mn1 n2 n1 0 0 nm3 W=2u L=0.35u
+Cl1 n2 0 20f
+Mp2 n3 n2 vdd vdd pm3 W=5u L=0.35u
+Mn2 n3 n2 0 0 nm3 W=2u L=0.35u
+Cl2 n3 0 20f
+Mp3 n4 n3 vdd vdd pm3 W=5u L=0.35u
+Mn3 n4 n3 0 0 nm3 W=2u L=0.35u
+Cl3 n4 0 20f
+Mp4 n5 n4 vdd vdd pm3 W=5u L=0.35u
+Mn4 n5 n4 0 0 nm3 W=2u L=0.35u
+Cl4 n5 0 20f
+Mp5 n1 n5 vdd vdd pm3 W=5u L=0.35u
+Mn5 n1 n5 0 0 nm3 W=2u L=0.35u
+Cl5 n1 0 20f
+
+.ic v(n1)=0 v(n2)=3.3 v(n3)=0 v(n4)=3.3 v(n5)=0
+.tran 5p 20n
+.meas tran vmax MAX v(n1) FROM=8n TO=20n
+.end

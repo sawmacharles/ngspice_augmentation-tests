@@ -1,0 +1,11 @@
+* pnoise_fold_mos.cir -- card #556: MOS1 common-source stage (nlev 2: flicker kf gm^2/(f^af W L Cox), channel thermal (2/3) beta vgst) whose
+* gate is driven by a 100 kHz trapezoid (vgs 1.2 <-> 1.6 V, 1 us edges), always saturated, no caps (Cdum only gives the PSS a state):
+* the bias is modulated, g(t) = gm(t) = beta vgst(t) is a trapezoid.  Closed form: test_pnoise.py ref_mos_fold().
+.param fs=100k trs=1u
+Vdd vdd 0 5
+Rd vdd d 2k
+Cdum d 0 1f
+.model nm nmos level=1 vto=0.7 kp=2e-4 gamma=0 lambda=0 tox=2e-8 kf=1e-24 af=1
+M1 d g 0 0 nm w=10u l=1u
+Vg g 0 PULSE(1.2 1.6 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+.end

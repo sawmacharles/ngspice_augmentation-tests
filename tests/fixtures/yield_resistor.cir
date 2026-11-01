@@ -1,0 +1,21 @@
+* yield_resistor.cir -- linear resistor stack, card #474 (tools/yieldest.py
+* validation). Driven by an IDEAL CURRENT SOURCE, not a Vin/R1/R2 voltage
+* divider: a classic voltage divider's tap voltage is Vin*R2/(R1+R2), a
+* RATIO, nonlinear in R1 and R2, which has no closed-form Gaussian output.
+* Here the current through the whole R1-R2 stack is fixed by the current
+* source regardless of R1, R2, so the top-node voltage is EXACTLY
+* Vtop = I*(R1+R2) -- a linear combination of two independent Gaussian
+* resistor values -- giving a Gaussian Vtop with an exact analytic Pf via
+* the normal CDF (tests/test_yield.py case (a)). Sign convention checked
+* empirically (2026-09-29): "I1 top 0 DC -1m" gives a POSITIVE V(top) of
+* magnitude |I|*(R1+R2).
+I1 top 0 DC -1m
+R1 top mid @@R1@@
+R2 mid 0 @@R2@@
+.control
+op
+let vt = v(top)
+set vts = $&vt
+echo MCMEAS vtop=$vts
+.endc
+.end

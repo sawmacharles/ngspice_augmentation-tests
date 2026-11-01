@@ -1,0 +1,35 @@
+* yield_disjoint.cir -- synthetic TWO-DISJOINT-FAILURE-REGION fixture, card
+* #474 (tools/yieldest.py's red-proof for "a failure region the search
+* can't find must be reported as a limitation or detected"). NOT a physical
+* circuit -- a deliberate worst-case-distance-search stress test, stated as
+* such, never presented as a real device.
+*
+* @@U1@@/@@U2@@ ARE the standardized parameters directly (nominal 0,
+* sigma 1 in tests/test_yield.py's spec), so no unit conversion is needed
+* here: the measured "meas" value is
+*   min( (u1-A1)^2+(u2-A2)^2-RA^2 , (u1-B1)^2+(u2-B2)^2-RB^2 )
+* i.e. "inside disk A OR inside disk B" (meas<0), the union of two disjoint
+* disks in the (u1,u2) plane:
+*   disk A: center (-4.763139720814412, -2.75),  radius 1.0, at angle
+*           210 deg / distance 5.5 from the origin -- exactly ON one of
+*           tools/yieldest.py's 24 (15-degree-spaced) search-grid rays, so
+*           the worst-case-distance search finds it (nearest boundary point
+*           at distance 4.5).
+*   disk B: center (-0.4568416727701806, 3.4700570148083365), radius 0.2,
+*           at angle 97.5 deg / distance 3.5 -- exactly MIDWAY between the
+*           grid rays at 90 and 105 deg (7.5 deg either side, more than
+*           disk B's own 3.3-deg-ish angular half-width), so the search
+*           deterministically never sees it, even though its nearest
+*           boundary point (distance 3.3) is CLOSER to the origin than
+*           disk A's, i.e. disk B contributes MORE probability than disk A,
+*           not less -- see tests/test_yield.py for the exact numbers
+*           (computed there by independent 2-D numerical integration, not
+*           reused from this tool).
+Bmeas meas 0 V = min( (@@U1@@-(-4.763139720814412))**2+(@@U2@@-(-2.75))**2-(1.0)**2 , (@@U1@@-(-0.4568416727701806))**2+(@@U2@@-(3.4700570148083365))**2-(0.2)**2 )
+.control
+op
+let mv = v(meas)
+set mvs = $&mv
+echo MCMEAS meas=$mvs
+.endc
+.end

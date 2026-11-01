@@ -1,0 +1,63 @@
+* pss_r6_shoot.cir -- R6 (ideal `sw` + XSPICE d_pwm/dac_bridge PWM) PSS-only
+* fixture, card #494 (plan T6.1, saltation). Same pattern as
+* tests/fixtures/pss_r3_shoot.cir: refs/r6_vm_buck_ideal.cir's body with its
+* .control block dropped and this file's own .pss + write/wrdata appended.
+* XP fbtop vout lgprobe is KEPT (this fixture is for plain PSS convergence
+* checks only, not a pac/pstb splice), so the lgprobe include path is
+* adjusted for this file's location (tests/fixtures/, two levels down from
+* the repo root, same as pss_r3_shoot.cir's own ../../stb/lgprobe.lib).
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+.ic v(opout)=0.55 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0
+
+Shs vin sw pwmp 0 SWMOD
+Sls sw 0   pwmn 0 SWMOD
+.model SWMOD SW(vt=0.5 vh=0.05 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+apwm opout dout pwmmod
+.model pwmmod d_pwm(frequency={fs} cntl_array=[0 {vramp}] dc_array=[0 1] init_phase=0
++ rise_delay=1e-9 fall_delay=1e-9)
+adac [~dout dout] [pwmn pwmp] dacmod
+.model dacmod dac_bridge(out_low=0 out_high=1 out_undef=0.5
++ input_load=5.0e-12 t_rise=2e-9 t_fall=2e-9)
+
+.control
+set filetype=ascii
+pss 500e3 300e-6 vout 200 10 150 1e-6 uic method=shoot
+write ~/Work/data/ngspice_augmentation/pss/r6_vm_buck/r6_shoot.raw
+wrdata ~/Work/data/ngspice_augmentation/pss/r6_vm_buck/r6_shoot.txt v(vout) v(pwmp) v(opout) i(L1)
+.endc
+.end

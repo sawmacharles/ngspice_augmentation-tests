@@ -1,0 +1,248 @@
+* R3d voltage-mode synchronous buck, WITH dead-time (ngspice_augmentation, card #479, 2026-09-29)
+* run: ngspice -b r3d_vm_buck_deadtime.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r3d_vm_buck_deadtime/)
+*
+* Same power stage, compensator and probe orientation as r3_vm_buck.cir
+* (12V -> 3.3V, fs=500kHz, L=10uH C=100uF Esr=10mOhm Rload=3.3, type-III
+* compensator R1..C3, `XP fbtop vout lgprobe`, PWM comparator identical to
+* R3's Bcmp). Card #470's tools/loss.py measured R3 (and R4) at ~29%
+* efficiency because their smooth Bhs/Bls switches are driven by the SAME
+* pwm signal (and its complement 1-pwm) with no separation in time, so they
+* are both significantly conductive during every crossing -- genuine
+* shoot-through, peaking in the hundreds of amps (see docs/loss.md). This
+* deck keeps R3 as the math reference (unchanged, still used by Phase 4-5
+* validations per refs/README.md) and adds the missing realism alongside it:
+* dead-time, finite switch transition time, realistic Ron, and a low-side
+* body/freewheel diode for the dead-time interval. Everything stays SMOOTH
+* per #447 A (no ideal `sw`, no XSPICE): the dead-time itself is generated
+* by an RC-charge / diode-fast-discharge steering network on each side of
+* the PWM signal (the classic analog break-before-make trick, also how real
+* gate-driver ICs generate dead-time), and the body/freewheel diode is a
+* smooth soft-knee B-source (not ngspice's native `D` device -- found to be
+* invisible to tools/loss.py's energy-balance sum, see its own comment
+* below -- and not an event either way).
+*
+* DEAD-TIME NETWORK (per side, hs from `pwm`, ls from `pwm_inv`=1-pwm):
+*   Rchg (pwm -> dly, {rdt}=430) charges the delay node toward the new
+*   level through a slow RC when the source signal RISES -- diode Ddis is
+*   reverse-biased during a rise, so only Rchg conducts.
+*   Ddis+Rdis (dly -> pwm, {rdisch}=60, series with a small fast diode)
+*   discharges the delay node quickly back toward the source when the
+*   source signal FALLS -- forward-biased, low resistance, fast.
+*   Net effect: each switch's own gate node (dly_hs/dly_ls) turns OFF
+*   quickly (following its own driving edge with only the short Rdis*Cdt
+*   time constant) and turns ON only after the slower Rchg*Cdt delay --
+*   true break-before-make, not just a delayed copy of both edges (a
+*   symmetric delay on both pwm and pwm_inv would shift both edges together
+*   and NOT create a dead zone; verified by hand analysis before building,
+*   see card #479 notes). Bhs/Bls are then driven by V(dly_hs)/V(dly_ls)
+*   through the same tanh transconductance shape as R3, using a lower
+*   steepness constant {kswd}=15 so that the RC network's own edge slew
+*   (not an arbitrarily steep tanh) sets the switch transition time.
+*   Component choice: rdt=430 rdisch=60 cdt=100p -> RC_on=43ns, RC_off=6ns.
+*   Hand estimate (exponential slew at the tanh's 0.5 threshold,
+*   transition width dV=2.94/kswd): t_on_delay=0.693*RC_on=29.8ns,
+*   t_off_delay=0.693*RC_off=4.2ns, so dead-time (on-delay minus off-delay)
+*   ~=25.6ns, turn-on transition ~=5.88*RC_on/kswd=16.9ns, turn-off
+*   transition ~=5.88*RC_off/kswd=2.4ns (turn-off is deliberately the fast
+*   direction, as in a real gate driver with a strong pull-down; this is a
+*   hand estimate from the linear-RC piece of the network only, ignoring
+*   the diode's own nonlinearity -- see MEASURED below for what the .tran
+*   actually shows).
+* SWITCH Ron: gon=70 -> Ron=1/70=14.3 mOhm (within the requested 10-20
+* mOhm; R3's was 10 mOhm exactly at the low edge, this deck picks a
+* distinct mid-range value). goff unchanged (1e-6 -> Roff=1 MOhm).
+* BODY/FREEWHEEL DIODE: Bbody (0 -> sw, a smooth B-source, NOT ngspice's
+* native `D` device -- see the comment at its own definition below for why)
+* represents the low-side FET's intrinsic body diode: when both switches
+* are off during the dead zone, the inductor current keeps flowing and
+* pulls node `sw` negative; Bbody clamps it near -vfbody=-0.6V and carries
+* that current instead of leaving `sw` floating on Csw alone (which rang
+* badly in an early trial -- see the "what was not done"/trap note below).
+* The dead-time steering diodes (Ddis_hs/Ddis_ls) ARE still native `D`
+* devices (their own power is small enough not to matter for the energy
+* balance, see MEASURED below), model `ddt`, IS=1e-6 N=1 -- a low-knee
+* (Schottky-like) diode, picked so it actually turns on within the ~1V
+* control-signal swing here (a "normal" ~0.6V-knee diode, tried first,
+* barely conducted at all in this range and defeated the fast-discharge
+* path -- see the dead-time-network comment above and card #479 notes).
+* GATE-DRIVE LOSS: NOT modelled (stated per the task) -- no gate-charge/
+* drive-current element exists in this deck, same as R3/R4 (tools/loss.py's
+* `gate_drive` category already reports 0/"not modelled" for exactly this
+* reason).
+*
+* MEASURED (ngspice-45.2 AND the fork ngspice-aug (aaba50ba3f49-s14), this
+* deck, 2026-09-29; both runs agree to ~1e-5V; see refs/README.md for the
+* summary table alongside R3/R4/R5/R6's existing rows, and
+* tests/test_refs_d.py for the automated pass/FAIL checks, all pass):
+*   fsw 499.95 kHz (ngspice-45.2) / 500.00 kHz (fork); duty 0.2870 (final)
+*   vs ideal Vout/Vin=0.275 (a bit above ideal, from Rdcr/Resr/Ron/dead-
+*   time drop, same direction as R3's own 0.2777). Vout settles to
+*   3.300007 V (ngspice-45.2) / 3.299975 V (fork) by t=1.5ms -- both
+*   within 0.001% of the 3.3V target (bound in the task/test: 1%). Ripple
+*   4.931 mV (0.149%). No-shoot-through check (tests/test_refs_d.py,
+*   independently re-deriving I_hs/I_ls from the recorded v(sw)/v(dly_hs)/
+*   v(dly_ls) trace using Bhs/Bls's own controlling expressions): peak
+*   simultaneous conduction current 1.26e-05 A, vs a 1%-of-load bound of
+*   1.00e-02 A (load ~1.000 A) -- passes with ~800x margin.
+*   tools/loss.py (--dcr Rdcr --esr Resr --switch Bhs --switch Bls, last 5
+*   periods of the 1.5ms settled run): P_in=3.3558W P_out=3.3000W,
+*   efficiency=98.34% (vs R3's 28.65% and the task's 85% bound), energy-
+*   balance residual=-0.0023% of P_in (bound 0.5%). Loss split: switch_
+*   conduction 18.3mW, switch_transition 4.0mW, inductor_dcr 10.2mW,
+*   capacitor_esr 0.19mW, resistive_other 23.2mW (dominated by Bbody, the
+*   body/freewheel diode, ~12.7mW -- see its own per-device breakdown in
+*   ~/Work/data/ngspice_augmentation/loss/test_refs_d/r3d/summary.json).
+*   tools/stb.py (XP probe, "dec 50 1 1e9"): attempted, returned "no 0 dB
+*   crossing" -- stb.py runs its own DC operating point + .ac, and this
+*   deck's DC fixed point (all the tanh/latch nonlinearities frozen at
+*   whatever they settle to with no switching) is not the periodic
+*   operating point the averaged small-signal loop gain assumes; R3/R4's
+*   own README already documents this as never having been exercised on
+*   THEM either ("No stb/loop-gain probe run was exercised... not
+*   touched here"), so this is a pre-existing tool/deck-class mismatch,
+*   not new to R3d. FRA crossover/PM is therefore still only the
+*   AVERAGED-MODEL ESTIMATE, unchanged from R3's own (same L/C/Esr/Rload,
+*   same R1..C3 compensator): fc=50kHz, PM~=73.5deg. The two changes dead-
+*   time actually makes to that estimate are both second-order at this
+*   crossover: (a) a small DC duty/gain loss from the ~15-25ns dead-time
+*   itself (a well-known effect, not separately quantified here -- see
+*   "what was not done"), and (b) an extra phase lag of
+*   360*fc*t_dead ~= 360*50e3*20e-9 ~= 0.36 deg at fc -- negligible next to
+*   73.5 deg of margin. Neither is expected to move the averaged-model PM
+*   by more than a fraction of a degree; this is reasoning from the
+*   unchanged compensator/plant, not a new measurement.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=70 goff=1e-6 kc=100
+.param rdt=430 rdisch=60 cdt=100p kswd=150
+* kswd raised from a first trial's 15 (hand-estimated for a ~15ns
+* transition, see the derivation above) to 150: found empirically (card
+* #479) that gon=70 is large enough that even a small residual gate
+* fraction (kswd=15's tail at, e.g., dly 0.19 away from the 0.5 threshold)
+* still gives amp-scale conductance*V, so a genuine current-based overlap
+* check (independently re-deriving I_hs/I_ls from the same B-source
+* formulas ngspice itself evaluates, as tools/loss.py does) found up to
+* ~0.78A of simultaneous hs/ls current with kswd=15 -- comparable to the
+* ~1A load, failing the <1% bound outright, even though the two gate
+* nodes' own 0.5-crossings were cleanly separated by ~20ns. kswd=150
+* makes the tanh's tail fall off fast enough (conductance within ~1e-5 of
+* goff by ~0.1 away from the 0.5 crossing, well inside the dead-time gap)
+* that the residual current in the gap is negligible -- see MEASURED
+* below and tests/test_refs_d.py's dead-time/overlap check. This does
+* make the switch's own transition faster than the 10-20ns example the
+* task gave (the RC network's own slew, times the now-much-narrower
+* tanh window, works out to ~1-2ns -- still a genuine smooth/finite
+* transition, just faster than the suggestion; a slower transition and a
+* clean (<1% of load) dead-time gap turned out to be in tension for a
+* single-stage tanh fed by this RC network's slew, and correctness (no
+* shoot-through) was prioritised, per the task's own ranked pass/fail
+* list).
+* kc raised from R3's 30 to 100: found empirically (card #479) that the
+* PWM comparator's own falling edge (which happens during the sawtooth
+* ramp's SLOW rise portion, not its fast retrace) has an intrinsic width
+* of ~1/kc/(ramp slew) -- at kc=30 that is ~32ns, comparable to (not much
+* faster than) the dead-time network's own RC_on=43ns, so the dead-time
+* network was NOT the dominant delay on that edge and the two switches'
+* gate nodes crossed 0.5 at nearly the same instant (near-zero effective
+* dead time on that edge, confirmed by a first trial: i(vin) showed a
+* -210A shoot-through spike). kc=100 shrinks that intrinsic width to
+* ~10ns, well under RC_on, so the RC network is what actually sets the
+* delay on both edges. The OTHER edge (pwm's rising edge, at the ramp's
+* fast retrace) was already fast at kc=30 and stays fast here.
+
+Vin vin 0 DC {vin_v}
+
+* smooth high-side (vin->sw) and low-side (sw->0) switches, driven by the
+* dead-time-delayed gate nodes dly_hs/dly_ls (NOT directly by pwm/1-pwm,
+* which is what R3 does and is exactly the missing-dead-time gap this deck
+* fixes)
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_hs)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_ls)-0.5))))
+
+* body/freewheel diode for the low side during the dead zone. Built as a
+* smooth B-source (soft-knee: ~zero below vfbody, ~linear with an
+* effective 1/gbody=20 mOhm "on-resistance" above it) rather than a native
+* ngspice `D` device: found empirically (card #479) that tools/loss.py
+* (used to check the 85%-efficiency/0.5%-energy-balance pass/fail bounds,
+* per the task) has no handling for device kind `D` at all -- a native
+* diode's dissipated power is silently excluded from its sum, and this
+* device carries enough current during the dead-time interval (the
+* inductor current freewheeling through it) that the resulting energy-
+* balance residual came out to 0.5249% with a native D device, just over
+* the 0.5% bound. loss.py DOES handle `B, I=expr` devices correctly (its
+* own documented "bexpr" method, re-deriving current from the parsed
+* expression -- see docs/loss.md), so rebuilding the body diode as one
+* fixes the accounting without changing its physical behaviour: still a
+* smooth, continuous function of Vd (no event, no ideal switch), just not
+* ngspice's own exponential diode primitive. vfbody=0.6V, gbody=50 (1/
+* gbody=20 mOhm, comparable to the switches' own Ron), kbody=50 (a
+* deliberately soft ~20mV knee, since this is a control-style smooth
+* model, not an attempt to match a real body diode's exponential I-V).
+.param vfbody=0.6 gbody=50 kbody=50
+Bbody 0 sw I = {gbody}*(-V(sw)-{vfbody})*0.5*(1+tanh({kbody}*(-V(sw)-{vfbody})))
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III, identical to R3), PWM comparator
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(opout)-V(ramp))))
+
+* dead-time steering network: pwm_inv is a separate B-source complement
+* (not a wire tap) so it has the same zero-output-impedance drive as pwm
+* itself and can source/sink the Rchg/Rdis branch currents cleanly
+Bpwminv pwm_inv 0 V = 1-V(pwm)
+
+* IS raised to 1e-6 (from a first trial's 1e-14, a "normal" ~0.6-0.7V-knee
+* Si diode model): found empirically (card #479) that a normal diode knee
+* is enormous relative to the 0-1V control-signal swing here, so the
+* "fast discharge" path barely conducted for most of the transition and
+* dly_hs/dly_ls ended up crossing 0.5 almost together anyway (a first
+* trial's i(vin) showed a -159A spike). IS=1e-6 (Schottky-like, low knee)
+* lets this small-signal steering diode actually turn on within the
+* available ~1V swing.
+.model ddt D(IS=1e-6 N=1.0)
+
+Rchg_hs pwm dly_hs {rdt}
+Ddis_hs dly_hs dis_hs ddt
+Rdis_hs dis_hs pwm {rdisch}
+Cdly_hs dly_hs 0 {cdt} IC=0
+
+Rchg_ls pwm_inv dly_ls {rdt}
+Ddis_ls dly_ls dis_ls ddt
+Rdis_ls dis_ls pwm_inv {rdisch}
+Cdly_ls dly_ls 0 {cdt} IC=0
+
+
+.control
+set filetype=ascii
+pss 500e3 300e-6 vout 2000 10 150 1e-6 uic method=shoot
+write ~/Work/data/ngspice_augmentation/pss/r3d_vm_buck_deadtime/r3d_shoot.raw
+wrdata ~/Work/data/ngspice_augmentation/pss/r3d_vm_buck_deadtime/r3d_shoot.txt v(vout) v(pwm) v(dly_hs) v(dly_ls) i(L1)
+.endc
+.end

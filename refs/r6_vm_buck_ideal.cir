@@ -1,0 +1,141 @@
+* R6 R3 buck rebuilt with ideal `sw` + XSPICE PWM (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r6_vm_buck_ideal.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r6_vm_buck_ideal/)
+*
+* Same power stage and same type-III compensator as refs/r3_vm_buck.cir
+* (12V->3.3V, fs=500kHz, L=10uH C=100uF Esr=10mOhm Rload=3.3, same R1..C3,
+* same op-amp model, same divider, same XP probe placement) so the two are
+* directly comparable (T2.1/R6, and T6.1 pac_events later: this is the deck
+* whose PAC is expected to be *wrong* before saltation corrections exist,
+* per verify.md's T5.x red-proof -- "an ideal-switch deck (R6) must fail
+* before Phase 6").
+*
+* The difference is entirely in the switch/PWM realisation:
+*  - High-side/low-side switches: native ngspice ideal voltage-controlled
+*    switches (`S`, .model SW), not smooth B-source conductances. Same
+*    Ron/Roff as R3's gon/goff (10 mOhm / 1 MOhm) for comparability, but the
+*    S device is a true event (a breakpoint, no continuous conductance
+*    curve) -- this is exactly the "abrupt sw/csw" case research/
+*    ngspice-internals-pss-pac.md S4.5 says loses dt_s/dx and breaks PAC.
+*  - PWM: the XSPICE `d_pwm` code model (digital.cm, ships with ngspice-45.2
+*    -- checked 2026-09-27 via `find /usr/local/ngspice-45.2/lib/ngspice
+*    -iname '*.cm'` and the bundled examples/xspice/pwm-osc/pwm-sin.cir),
+*    driven by the SAME compensator output (opout) as R3's comparator, with
+*    cntl_array=[0,vramp] dc_array=[0,1] so it reproduces R3's Gpwm=1/vramp
+*    duty mapping (opout=0 -> duty=0, opout=vramp -> duty=1). Its digital
+*    output goes through a `dac_bridge` (out_low=0 out_high=1) to drive the
+*    switches; `[~dout dout]` gives the complementary (high-side/low-side)
+*    drive with no dead time, as in R3.
+* Everything else (compensator R1..C3, op-amp, divider, XP probe, L/C/Esr/
+* Rload, Vin) is copied unchanged from r3_vm_buck.cir so a difference in
+* results traces to the switch/PWM realisation, not a value change.
+*
+* Snubber: Rsnub+Csnub (10 Ohm + 1nF) from the switch node to ground was
+* REQUIRED for convergence (found 2026-09-27, card #450): without it, the
+* ideal S device combined with the independently-bridged complementary
+* digital drive (pwmp/pwmn each through their own dac_bridge t_rise/t_fall)
+* blew up (v(vout), v(opout) diverging past 1e270) around t=369us, i.e.
+* well into the run, not at t=0 -- a genuinely different failure mode from
+* R3's op-amp sign bug. This is exactly the kind of numerical fragility
+* research/ngspice-internals-pss-pac.md S4.5 flags for abrupt sw/csw
+* switches (no smooth conductance overlap to fall back on if the two gate
+* drives are not perfectly simultaneous); the snubber is a standard,
+* legitimate switching-converter modelling technique, not a workaround that
+* changes the circuit's intent, and is noted here for honesty (V-G7 also
+* means saying what had to be added to get a live run).
+*
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table). fsw measured 497.85 kHz (t_period=2.008619e-06 s) vs 500 kHz
+* param. duty measured 0.2783 (500us) / 0.2712 (1500us) vs ideal 0.275 --
+* both close, comparable to R3's 0.2762/0.2777. v(vout) steady-state
+* average: 3.294988 V (490-500us), 3.299978 V (990-1000us), 3.300021 V
+* (1490-1500us) vs the 3.3V target -- regulates to within ~0.03%, matching
+* R3's regulation. Ripple (max-min, 1490-1500us) = 4.811 mV (0.15% of
+* Vout) -- essentially the same as R3's 4.836 mV, i.e. this deck's transient
+* behaviour is a good match to R3's despite the different switch/PWM
+* realisation (as expected: it is only the SMALL-SIGNAL/loop-gain behaviour
+* around switching events that the ideal-switch model is expected to get
+* wrong, per T5.x's red-proof, not the large-signal steady state measured
+* here). Runtime for the full 1.5ms/750-period run: 3.1 s.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+* .ic on the compensator/opamp nodes avoids two convergence traps found
+* 2026-09-27 (card #450): (1) with 'uic', opout starts at exactly the
+* cntl_array boundary (0V), which triggers d_pwm's "duty cycle 0" clamp
+* right as the ideal switch's very first event fires and fails at t~1e-10s
+* ("cause unrecorded"); (2) letting ngspice solve a real DC operating point
+* instead (no uic) drives opout to -99999V because the type-III network has
+* no DC path across C1/C2 (a pure integrator has no DC operating point) --
+* R3's smooth switches never hit this because 'uic' there starts the
+* transient before any op-point solve is attempted. These .ic values just
+* give the transient a sane, off-boundary starting guess.
+.ic v(opout)=0.55 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0
+
+* ideal switches, native ngspice S device, driven by analog gate signals
+* pwmp (high-side) / pwmn (low-side, complementary) from the XSPICE chain
+Shs vin sw pwmp 0 SWMOD
+Sls sw 0   pwmn 0 SWMOD
+.model SWMOD SW(vt=0.5 vh=0.05 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III) -- identical to r3_vm_buck.cir
+.include ../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+* 2026-09-30 (card #519): polarity fixed. Was `Goa opout 0 vrefnode compin` = local POSITIVE feedback through C1f/C2f
+* (unstable pole ~gm/C ~ 1e12 1/s, hidden by coarse implicit steps: fixed-step .tran -> 1e168 V, reltol 1e-6 aborts).
+* Now current flows INTO opout when vref > compin: inverting amp, negative feedback. Slow dynamics unchanged (refs/README.md).
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+* XSPICE PWM: opout in [0,vramp] -> duty in [0,1], at fs, then to analog gate drive
+apwm opout dout pwmmod
+.model pwmmod d_pwm(frequency={fs} cntl_array=[0 {vramp}] dc_array=[0 1] init_phase=0
++ rise_delay=1e-9 fall_delay=1e-9)
+adac [~dout dout] [pwmn pwmp] dacmod
+.model dacmod dac_bridge(out_low=0 out_high=1 out_undef=0.5
++ input_load=5.0e-12 t_rise=2e-9 t_fall=2e-9)
+
+.control
+set filetype=ascii
+tran 10n 1.5m 0 uic
+meas tran t_period TRIG v(pwmp) VAL=0.5 RISE=250 TARG v(pwmp) VAL=0.5 RISE=251
+let fsw_meas = 1/t_period
+meas tran duty_meas AVG v(pwmp) FROM=498u TO=500u
+meas tran duty_meas_final AVG v(pwmp) FROM=1498u TO=1500u
+meas tran vout_avg_early AVG v(vout) FROM=490u TO=500u
+meas tran vout_avg_mid AVG v(vout) FROM=990u TO=1000u
+meas tran vout_avg_final AVG v(vout) FROM=1490u TO=1500u
+meas tran vout_max_final MAX v(vout) FROM=1490u TO=1500u
+meas tran vout_min_final MIN v(vout) FROM=1490u TO=1500u
+let vout_ripple = vout_max_final - vout_min_final
+print t_period fsw_meas duty_meas duty_meas_final vout_avg_early vout_avg_mid vout_avg_final vout_max_final vout_min_final vout_ripple
+write ~/Work/data/ngspice_augmentation/refs/r6_vm_buck_ideal/r6_vm_buck_ideal.raw
+wrdata ~/Work/data/ngspice_augmentation/refs/r6_vm_buck_ideal/r6_vm_buck_ideal.txt v(vout) v(pwmp) v(opout) i(L1)
+.endc
+.end

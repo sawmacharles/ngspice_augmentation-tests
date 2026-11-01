@@ -1,0 +1,24 @@
+* 20_pss_driven_detection_badclock.cir -- card #507 second-reader finding:
+* .pss method=shoot's driven-circuit detector looks for a V/I source with a
+* SPICE TIME FUNCTION (PULSE/SIN/PWL/...) somewhere in the deck. A clock
+* built as a behavioural B-source referencing the bare `time` variable
+* (Bclk clk 0 V = ... sin(...time...)) is NOT a source with a time
+* function in the sense the detector checks -- the run is correctly
+* REFUSED, not silently misinterpreted, but the refusal can be surprising
+* the first time, since the circuit visibly DOES have a periodic clock.
+* RED-PROOF deck (expected to be refused) -- see 06_pss_shoot.cir for the
+* SAME circuit's clock rebuilt as a plain PULSE source, which converges
+* normally.
+.param rin=10k rsw=10k c=1n fclk=100k duty=0.5
+.param per={1/fclk}
+Vin vin 0 DC 1 AC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx sw1 {rsw}
+Sswitch sw1 0 clk 0 SWCLK
+.model SWCLK SW(vt=0.5 vh=0.05 ron=1e-4 roff=1e9)
+Bclk clk 0 V = 0.5 + 0.5*sin(2*3.14159265*{fclk}*time)
+.control
+pss 100e3 100e-6 vx 200 10 25 1e-6 uic method=shoot
+.endc
+.end

@@ -1,0 +1,22 @@
+* tr_latch_sr_cmos -- CMOS NOR SR latch (level-1 MOS, 3.3 V) toggled by set/reset pulses every 2 us: bistable regeneration, feedback, floating internal nodes of the series PMOS
+* stock: completes at default settings
+* probe: v(q) v(qb)
+.model nm1 NMOS(LEVEL=1 VTO=0.7 KP=120u LAMBDA=0.03 CGSO=0.3n CGDO=0.3n CBD=10f CBS=10f PB=0.8)
+.model pm1 PMOS(LEVEL=1 VTO=-0.7 KP=50u LAMBDA=0.03 CGSO=0.3n CGDO=0.3n CBD=10f CBS=10f PB=0.8)
+Vdd vdd 0 DC 3.3
+Vs s 0 PULSE(0 3.3 1u 1n 1n 500n 4u)
+Vr r 0 PULSE(0 3.3 3u 1n 1n 500n 4u)
+* NOR(a,b) = x : series PMOS to vdd, parallel NMOS
+Mp1 vdd s m1 vdd pm1 W=20u L=1u
+Mp2 m1 qb q vdd pm1 W=20u L=1u
+Mn1 q s 0 0 nm1 W=8u L=1u
+Mn2 q qb 0 0 nm1 W=8u L=1u
+Mp3 vdd r m2 vdd pm1 W=20u L=1u
+Mp4 m2 q qb vdd pm1 W=20u L=1u
+Mn3 qb r 0 0 nm1 W=8u L=1u
+Mn4 qb q 0 0 nm1 W=8u L=1u
+Cq q 0 20f
+Cqb qb 0 20f
+.ic v(q)=0 v(qb)=3.3
+.tran 1n 8u
+.end

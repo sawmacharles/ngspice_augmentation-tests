@@ -1,0 +1,33 @@
+* pxf_lti.cir -- card #499 (plan T5.4): LTI circuit, TWO independent
+* small-signal sources (Vin, Iinj) into the SAME truly time-invariant
+* network (Vin -> out through Rin; Iinj injects directly at out), PSS
+* driven by an UNRELATED periodic source (same pattern as pac_lti.cir,
+* card #465) so a genuine period exists for PSS to shoot on -- the true
+* small-signal path never sees the clock network at all. NEITHER Vin nor
+* Iinj carries a netlist `AC` value here (deliberately -- `.pxf`'s own
+* point is not needing one; test_pxf.py's reference `.pac`/`.ac` decks add
+* `AC 1` to exactly one source at a time via text substitution).
+*
+* test_pxf.py's check_pxf_lti() cross-checks, for EACH source:
+*   (a) `.pxf ... out sources="Vin" sources="Iinj" method="shoot"
+*        solver="td"` (this fixture, one run, both sources) against
+*       `.pac ... solver=td` with ONLY that source's own `AC 1` set (two
+*        separate single-source runs) -- expect near machine-precision
+*        agreement (same pac_engine_run() code both call, see
+*        pacshoot.c's pac_td_pxf() design comment);
+*   (b) the SAME `.pxf` result against plain `.ac` on the same (unclocked)
+*        small-signal network with only that source's `AC 1` set -- this
+*        is also the card's separately-required "an LTI deck where it
+*        equals plain .ac/.tf" check, reusing this one fixture for both.
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+* the true (time-invariant) small-signal network under test
+Vin in 0 DC 1
+Rin in out 1k
+Iinj 0 out DC 0
+Cout out 0 10n
+Rload out 0 10k
+
+.end

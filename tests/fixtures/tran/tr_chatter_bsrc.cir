@@ -1,0 +1,8 @@
+* tr_chatter_bsrc -- sliding-mode chatter: ideal comparator B-source (v(c)>0.5 ? 0 : 1) closing a loop through an RC; the solution sits ON the discontinuity
+* stock: FAIL: 'Transient op failed, timestep too small' (the operating point sits on the comparator discontinuity)
+* probe: v(c) v(out)
+Bcmp out 0 V = v(c)>0.5 ? 0 : 1
+R1 out c 1k
+C1 c 0 1n
+.tran 10n 100u
+.end

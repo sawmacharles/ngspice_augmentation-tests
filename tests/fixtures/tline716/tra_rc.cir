@@ -1,0 +1,7 @@
+* tra_rc: 500 kHz pulse source -> Rs -> lossless line (TRA) -> R || C load
+.param fs=500k tclk={1/fs} td=0.6u z0=50 rs=20 rl=100 cl=1n
+Vs src 0 PULSE(0 1 0 20n 20n {0.5*tclk-20n} {tclk}) AC 1
+Rs src a {rs}
+T1 a 0 b 0 Z0={z0} TD={td}
+Rl b 0 {rl}
+Cl b 0 {cl}

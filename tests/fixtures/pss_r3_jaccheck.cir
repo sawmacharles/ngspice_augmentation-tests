@@ -1,0 +1,135 @@
+* R3 voltage-mode synchronous buck, fixed frequency (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r3_vm_buck.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r3_vm_buck/)
+*
+* card #458 FOURTH PASS (plan T4.2) ADDENDUM: this copy is a diagnostic
+* fixture for comparing the FD monodromy against the new analytic
+* (PSS_SHOOT_JACOBIAN=analytic) one ELEMENT-WISE, isolated from the
+* Newton loop's own iteration dynamics. Every reactive device's IC= is
+* the FD path's OWN converged x0 for the nominal pss_r3_shoot.cir deck
+* (PSS_SHOOT_DEBUG dump, 2026-09-29: c2f=0.4490723 c1f=0.44464499
+* c3in=-1.6819472e-05 coa=0.55536057 cout=3.2996243 csw=11.992212
+* l1=0.77454416), and the .pss card uses stabtime=0 (no warm-up) and
+* sc_iter=1 (one Newton iteration only), so a single ngspice run gives
+* exactly ONE baseline+Jacobian evaluation at that fixed point -- run
+* once under each PSS_SHOOT_JACOBIAN setting with PSS_SHOOT_DEBUG=1 and
+* diff the "DEBUG FD Phi[k]=" / "DEBUG analytic Phi[k]=" lines. See the
+* card #458 fourth-pass report for the comparison and what it found.
+*
+* 12V -> 3.3V, fs=500kHz, L/C output filter, type-III compensator built from
+* an ideal-ish op-amp (VCCS Goa + Ro + Co, single dominant pole) with an R/C
+* feedback network (R1..R3, C1..C3), and a PWM comparator. All switches are
+* SMOOTH: the high-side and low-side switches are behavioural (B-source)
+* variable conductances between goff (off) and gon (on), transitioning with
+* tanh(ksw*(pwm-0.5)) -- no ideal `sw`, no XSPICE digital (that is R6's job,
+* rebuilding this same power stage + compensator with ideal `sw` + XSPICE
+* d_pwm, so the two can be compared per T2.1/R6 and T6.1 pac_events).
+* The PWM comparator itself is also smooth: pwm = 0.5*(1+tanh(kc*(vc-ramp))),
+* ramp a PULSE-approximated sawtooth 0..vramp at fs (not an ideal event).
+* Loop-gain injection: XP (../../stb/lgprobe.lib, card #451) sits between the
+* output node and the top of the feedback divider (vout -> XP -> fbtop -> Ra
+* -> fbnode -> Rb -> gnd), so a future stb/PAC run breaks the loop there.
+*
+* COMPENSATOR DESIGN (averaged-model estimate, not measured from this
+* switching deck -- ngspice-45.2 has no periodic AC to measure it with; that
+* is exactly what Phase 5 (T5.1/T5.2 pac_sb0/pstb_loop) will add, checked
+* against refs/... FRA later in T2.3):
+*   Averaged plant Gvd(s) = Vin*(1+s*Esr*C) / (1 + s*(L/Rload) + s^2*L*C)
+*   fLC = 1/(2*pi*sqrt(L*C)) = 5032.9 Hz, fESR = 1/(2*pi*Esr*C) = 159154.9 Hz
+*   Gpwm = 1/Vramp (duty = vc/Vramp), Hfb = Rb/(Ra+Rb) = 1000/3300 = 0.30303
+*   Target crossover fc = fs/10 = 50 kHz. Type-III zeros placed at fLC/2 =
+*   2516.46 Hz (both), poles at fESR = 159154.9 Hz and fs/2 = 250 kHz, gain
+*   set so |loop(fc)| = 1 (see scratch calc, card #450 design notes below).
+*   Estimated result (averaged model, python cmath calc, not from this
+*   deck's .tran): |loop| crosses 0 dB only once, at fc = 50.000 kHz, with
+*   phase -106.5 deg there, i.e. PHASE MARGIN ~= 73.5 deg (ESTIMATE from the
+*   averaged/small-signal model -- the real switching circuit's loop gain is
+*   not measured by this .tran and still needs Phase 2/5 tooling to check).
+*   Component mapping (R1 fixed, standard type-III Zf/Zin formulas, derived
+*   in the design scratch, not re-derived here): R1=10k R2=27.51k R3=101.7
+*   C1=36.35pF C2=2.299nF C3=6.261nF.
+*
+* Op-amp model: VCCS Goa (gm=1000 A/V) into Ro=100 Ohm || Co=100pF, giving
+* open-loop DC gain A0=gm*Ro=1e5 (100dB) and a dominant pole at
+* 1/(2*pi*Ro*Co)=15.9MHz -- far above the compensator's highest pole
+* (fp3=250kHz) so it stays close to ideal (nearly flat gain) across the
+* whole loop-shaping range. A first attempt used a more "realistic" 100Hz
+* dominant pole (GBW=10MHz): tested in isolation (a standalone R1..C3+Goa
+* submodule, no power stage, DC step at the input) it was NOT stable --
+* v(opout) diverged to 1e98 within 200us. That is the feedback network's
+* own noise gain 1/beta(s) intersecting the amplifier's -20dB/decade
+* rolloff with too little phase margin at the amplifier's own (high, since
+* A0 is huge) local crossover -- a real, well-known op-amp compensator
+* design trap, not a switching-circuit effect. Fixed here by pushing the
+* op-amp's own pole far out so it stops interacting with the compensator's
+* poles/zeros; this makes the op-amp much faster than any real part, which
+* is exactly the "ideal-ish" approximation asked for, at the cost of not
+* being a realistic op-amp GBW.
+*
+* Switch idealisation: gon=100 (Ron=10 mOhm), goff=1e-6 (Roff=1 MOhm), ksw=30
+* (tanh steepness in the 0..1 pwm signal, ~35mV transition band). Comparator
+* kc=30 in volts (opout/ramp both 0..~2V), so pwm transitions in roughly
+* 1/kc/(ramp slew rate) ~= 35ns, well under T=2us. (ksw=kc=50 hit "timestep
+* too small" convergence failures around t=22us during debugging; 30 did
+* not -- kept at 30, not chased further since it is smooth-enough either way.)
+*
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table). fsw measured 500.30 kHz (t_period=1.998814e-06 s) vs 500 kHz
+* param -- switching is live. duty measured 0.2762 (at 500us) / 0.2777 (at
+* 1500us) vs the ideal Vout/Vin=3.3/12=0.275 -- close, the small excess is
+* the Rdcr/Resr/Ron drop. v(vout) steady-state average: 3.300360 V (490-
+* 500us), 3.299680 V (990-1000us), 3.299578 V (1490-1500us) vs the 3.3 V
+* target -- regulates to within 0.03%, not microvolts, not flat (V-G7).
+* Ripple (max-min, 1490-1500us) = 4.836 mV (0.15% of Vout) -- small but a
+* real, non-zero, resolvable switching ripple. Startup: peak overshoot
+* 4.92 V at t=52.4us (no soft-start in this deck), then a monotonic
+* (non-oscillatory, consistent with the ~73.5 deg PM estimate) decay to
+* within 1% of 3.3V by t~220us (~110 switching periods) and within ~0.1%
+* by t~500us. Runtime for the full 1.5ms/750-period run: 2.1 s.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=30
+
+Vin vin 0 DC {vin_v}
+
+* smooth high-side (vin->sw) and low-side (sw->0) switches, driven by pwm in [0,1]
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+
+Csw sw 0 100p IC=11.992212
+L1 sw swl {lval} IC=0.77454416
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=3.2996243
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III), PWM comparator
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa} IC=0.55536057
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3} IC=-1.6819472e-05
+C1f compin opout {c1} IC=0.44464499
+R2f compin n2 {r2}
+C2f n2 opout {c2} IC=0.4490723
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(opout)-V(ramp))))
+
+
+.control
+set filetype=ascii
+pss 500e3 0 vout 200 10 1 1e-6 uic method=shoot
+.endc
+.end

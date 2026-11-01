@@ -1,0 +1,15 @@
+* R1a unilateral single-pole amplifier, non-inverting gain of 2 (ngspice_augmentation, card #450, 2026-09-27)
+* Linear, no reverse transmission (VCCS input draws no current), so the return ratio has a closed form:
+*   T(s) = gm * Zo*Zb / (Zo + R1 + Zb),  Zo = Ro || 1/(s Co),  Zb = R2 || 1/(s Cn)
+* tests/test_stb.py reads the .param values below to compute it. Probe XP breaks the only loop between fb (upstream, b) and vn (downstream, a).
+.param gm=10m ro=100k co=10p r1=100k r2=100k cn=2p
+.include ../stb/lgprobe.lib
+Vp vp 0 DC 0 AC 0
+G1 0 o vp vn {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+R1 o fb {r1}
+R2 fb 0 {r2}
+XP vn fb lgprobe
+Cn vn 0 {cn}
+.end

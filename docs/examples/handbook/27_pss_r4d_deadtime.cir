@@ -1,0 +1,106 @@
+* 27_pss_r4d_deadtime.cir -- handbook example (card #534): R4d, the peak-current-mode synchronous buck WITH the same dead-time
+* network, fs=500 kHz. Body of tests/fixtures/rd_r4d_shoot.cir (card #479/#505), lgprobe replaced by a plain Vprobe.
+.param vin_v=11 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=50.51k c1=25.21p c2=6.534n
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=70 goff=1e-6 kc=100
+.param rsense=0.05 rigain=8
+.param vslope_amp=0
+.param cq=1p gset=1e-4 greset=1
+.param setpw={0.01*tclk}
+.param rdt=430 rdisch=60 cdt=100p kswd=150
+* kswd=150, not a smaller "matched to the 10-20ns transition-time hand
+* estimate" value: same finding as r3d_vm_buck_deadtime.cir (card #479) --
+* gon=70 is large enough that a shallow tanh tail still gives amp-scale
+* overlap current between hs/ls during the dead-time gap. See that file's
+* header for the full derivation/trade-off note.
+
+Vin vin 0 DC {vin_v}
+.ic v(vc)=0.6 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0 v(q)=0
+.ic v(dly_hs)=0 v(dly_ls)=0
+
+* smooth high-side/low-side switches driven by the dead-time-delayed gate
+* nodes dly_hs/dly_ls (NOT directly by q/1-q, which is R4's design and is
+* exactly the missing-dead-time gap this deck fixes)
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_hs)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_ls)-0.5))))
+
+* body/freewheel diode for the low side during the dead zone. Built as a
+* smooth B-source, not a native ngspice `D` device -- tools/loss.py (used
+* for the 85%-efficiency/0.5%-energy-balance pass/fail check) has no
+* handling for device kind `D` at all and silently excludes its power
+* from the sum, which pushed the energy-balance residual over 0.5% in a
+* first trial on r3d_vm_buck_deadtime.cir (see that file's header for the
+* full finding, card #479); this deck reuses the same fix and the same
+* vfbody/gbody/kbody values.
+.param vfbody=0.6 gbody=50 kbody=50
+Bbody 0 sw I = {gbody}*(-V(sw)-{vfbody})*0.5*(1+tanh({kbody}*(-V(sw)-{vfbody})))
+
+Csw sw 0 100p
+
+Rsense sw swcs {rsense}
+L1 swcs swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vprobe fbtop vout DC 0
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 vc vrefnode compin {gm_oa}
+Roa vc 0 {ro_oa}
+Coa vc 0 {co_oa}
+R1in fbnode compin {r1}
+C1f compin vc {c1}
+R2f compin n2 {r2}
+C2f n2 vc {c2}
+
+Vslope slope 0 PULSE(0 {vslope_amp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcs vcs 0 V = {rigain}*V(sw,swcs)
+Bcmp reset_sig 0 V = 0.5*(1+tanh({kc}*(V(vcs)+V(slope)-V(vc))))
+Vsetp setp 0 PULSE(0 1 0 1n 1n {setpw} {tclk})
+Cq q 0 {cq}
+Bq q 0 I = {greset}*V(reset_sig)*V(q) - {gset}*V(setp)*(1-V(q))
+
+* dead-time steering network (identical topology/values to r3d). NOTE: q
+* itself is a genuine dynamic state (a real capacitor Cq=1p driven only by
+* the small controlled current Bq, high impedance), NOT a zero-impedance
+* voltage-defined node like R3's `pwm` (a B-source V=expr, which behaves
+* as an ideal voltage source regardless of load current). Tapping the
+* Rchg/Rdis dead-time network directly onto q loaded it enough to swamp
+* Bq's own tiny current budget -- found empirically (card #479): q crept
+* up over tens of microseconds instead of oscillating at 500kHz, and the
+* whole converter never started switching. Fixed by first buffering q
+* through its own B-source (V=expr, zero output impedance, exactly like
+* Bcmp/pwm in R3d) into `qbuf`/`qbuf_inv`, and building the dead-time
+* network off THOSE nodes instead -- q's own latch dynamics are then
+* completely unaffected by the dead-time network's loading, same as R3d.
+Bqbuf qbuf 0 V = V(q)
+Bqinv qbuf_inv 0 V = 1-V(q)
+.model ddt D(IS=1e-6 N=1.0)
+
+Rchg_hs qbuf dly_hs {rdt}
+Ddis_hs dly_hs dis_hs ddt
+Rdis_hs dis_hs qbuf {rdisch}
+Cdly_hs dly_hs 0 {cdt} IC=0
+
+Rchg_ls qbuf_inv dly_ls {rdt}
+Ddis_ls dly_ls dis_ls ddt
+Rdis_ls dis_ls qbuf_inv {rdisch}
+Cdly_ls dly_ls 0 {cdt} IC=0
+
+
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+pss 500e3 1500e-6 vout 200 10 150 1e-6 uic method=shoot
+wrdata pss_r4d.txt v(vout) v(vc) i(L1)
+.endc
+.end

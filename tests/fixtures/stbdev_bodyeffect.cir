@@ -1,0 +1,16 @@
+* stbdev_bodyeffect -- source-degenerated NMOS common-source stage: bulk
+* tied to true ground, source above ground through Rs (self-bias), so
+* Vbs != 0 and gmbs is materially nonzero. A discrete Cgd gives the local
+* loop its frequency dependence. Used to show gm-only vs gm+gmbs is not a
+* negligible choice (card #459 (plan T3.4), tests/test_stb_device.py
+* check 3 / red-proof).
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05 gamma=0.6 phi=0.7
++ cgso=0 cgdo=0 cgbo=0 cbd=0 cbs=0
+Vdd vdd 0 DC 3.3
+Vin g 0 DC 1.6 AC 0
+Rg g gg 1k
+M1 d gg s 0 nch w=20u l=1u
+Rd vdd d 10k
+Rs s 0 1k
+Cgd gg d 300p
+.end

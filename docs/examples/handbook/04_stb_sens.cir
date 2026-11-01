@@ -1,0 +1,37 @@
+* 04_stb_sens.cir -- adjoint sensitivity dPM/dp on a linear two-stage
+* amplifier's loop gain (docs/sens.md), handbook example. Same topology as
+* tests/fixtures/sens_r1b_native.cir: R1o (dominant-pole resistor at n1)
+* and Cc (Miller cap) are the two components asked "how much does each
+* move phase margin". Native .stb probe (a plain 0V V-source, Vprobe) in
+* the feedback wire.
+*
+* Card #507 second-reader correction: the plot name a given .stb run's
+* sensitivity vectors land in (stb2/stb4/...) is NOT predictable from the
+* netlist alone -- it depends on plot numbering state that is not fixed
+* across runs/sessions. Two robust alternatives, both shown below:
+* `display` (or `setplot`) after the analysis lists the CURRENT plot's own
+* name and every vector in it; or, since the vectors just produced ARE
+* already the current plot, referencing them with NO plot prefix at all
+* works directly (`dPM_dR1o`, not `stb4.dPM_dR1o`) -- do not hard-code a
+* plot number.
+.param gm1=1m r1o=1Meg c1=0.2p gm2=5m r2o=50k cc=1p ro1=20k ro2=20k cl=5p cin=0.5p cf=0.1p
+Vp vp 0 DC 0 AC 0
+G1 n1 0 vp vn {gm1}
+R1o n1 0 {r1o}
+C1 n1 0 {c1}
+G2 oa 0 n1 0 {gm2}
+R2o oa 0 {r2o}
+Cc n1 oa {cc}
+Vprobe ol oa DC 0
+CL ol 0 {cl}
+Rf1 ol vn {ro1}
+Rf2 vn 0 {ro2}
+Cin vn 0 {cin}
+Cf vn n1 {cf}
+.control
+stb dec 100 1e5 1e8 probe=Vprobe sens=R1o sens=Cc
+display
+print dPM_dR1o dPM_dCc
+quit
+.endc
+.end

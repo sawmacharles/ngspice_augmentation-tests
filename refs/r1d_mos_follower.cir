@@ -1,0 +1,19 @@
+* R1d five-transistor OTA as a unity-gain follower, level-1 MOSFETs (ngspice_augmentation, card #450, 2026-09-27)
+* Nonlinear bias; transistor capacitances give reverse transmission. Reference: two-port Y parameters
+* of the broken loop with both port sources held at the closed-loop DC voltage (tests/test_stb.py).
+* Probe XP breaks the feedback wire between out (upstream, b) and the gate of M2 inn (downstream, a).
+.include ../stb/lgprobe.lib
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.model pch pmos level=1 vto=-0.6 kp=80u lambda=0.08 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+Vdd vdd 0 DC 3.3
+Vin inp 0 DC 1.5 AC 0
+Ib vdd bias DC 20u
+M5b bias bias 0 0 nch w=10u l=1u
+M5 tail bias 0 0 nch w=20u l=1u
+M1 d1 inp tail 0 nch w=20u l=1u
+M2 out inn tail 0 nch w=20u l=1u
+M3 d1 d1 vdd vdd pch w=20u l=1u
+M4 out d1 vdd vdd pch w=20u l=1u
+CL out 0 2p
+XP inn out lgprobe
+.end

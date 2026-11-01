@@ -1,0 +1,16 @@
+* tr_schmitt_bjt -- emitter-coupled BJT Schmitt trigger driven by a very slow triangle (6 V in 10 ms): hysteresis, regenerative snap at each threshold with a nearly static input
+* stock: completes at default settings
+* probe: v(out) v(in)
+.model qn NPN(IS=1e-15 BF=120 BR=3 VAF=80 CJE=1p CJC=0.8p TF=0.3n TR=5n RB=50 RC=5 RE=1)
+Vcc vcc 0 DC 10
+Vin in 0 PWL(0 0 10m 6 20m 0)
+Rc1 vcc c1 2k
+R1 c1 b2 5k
+R2 b2 0 4k
+Rc2 vcc out 1k
+Re e 0 500
+Q1 c1 in e qn
+Q2 out b2 e qn
+.meas tran vhi MAX v(out) FROM=0 TO=20m
+.tran 10u 20m
+.end

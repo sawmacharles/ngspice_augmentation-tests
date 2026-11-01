@@ -1,0 +1,51 @@
+* c_diffamp_dmcm_native.cir -- SAME differential amplifier as
+* docs/examples/c_diffamp_dmcm_diffprobe.cir, broken at the SAME two
+* wires, but with the probe written as two plain 0 V V-sources (native
+* `.stb`'s probe=<Vp> probe2=<Vn> mode=dm|cm resolves two ordinary
+* voltage-source instances -- it does not expand the stb/diffprobe.lib
+* subcircuit): "Vp outpfb outp DC 0" / "Vn outnfb outn DC 0" replace
+* "XP outpfb outp outnfb outn diffprobe". docs/stb.md example (c),
+* native half -- run against the private fork build
+* (buildrecipe/README.md), not the system ngspice.
+*
+* probe2=/mode= (not the probe=Vp,Vn comma form) is the RECOMMENDED and
+* reliable syntax -- see docs/stb.md's syntax reference for why the comma
+* form can be mangled by ngspice's own tokenizer on the interactive
+* command.
+*
+* NEGATIVE-FEEDBACK POLARITY FIXED card #464, 2026-09-28 -- same fix as
+* c_diffamp_dmcm_diffprobe.cir (swap G1p/G1n/Gcmfb control-node order,
+* gmcorr 1m -> 8u); see that file's header for why.
+
+.param gm1=10m ro=200k co=5p rf=99k rin=1k rsense=2meg
+.param gmcmfb=100u rcmfb=500k ccmfb=20p gmcorr=8u
+
+G1p outp 0 vfbp vfbn {gm1}
+G1n outn 0 vfbn vfbp {gm1}
+Gcorrp outp 0 vcmfb 0 {gmcorr}
+Gcorrn outn 0 vcmfb 0 {gmcorr}
+Rop outp 0 {ro}
+Cop outp 0 {co}
+Ron outn 0 {ro}
+Con outn 0 {co}
+
+Vp outpfb outp DC 0
+Vn outnfb outn DC 0
+
+Rf1 outpfb vfbp {rf}
+Rin1 vfbp 0 {rin}
+Rf2 outnfb vfbn {rf}
+Rin2 vfbn 0 {rin}
+Rsp outpfb vcs {rsense}
+Rsn outnfb vcs {rsense}
+
+Gcmfb vcmfb 0 0 vcs {gmcmfb}
+Rcmfb vcmfb 0 {rcmfb}
+Ccmfb vcmfb 0 {ccmfb}
+
+.control
+stb dec 30 1 100meg probe=Vp probe2=Vn mode=dm
+stb dec 30 1 100meg probe=Vp probe2=Vn mode=cm
+quit
+.endc
+.end

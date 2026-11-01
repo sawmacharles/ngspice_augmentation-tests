@@ -1,0 +1,48 @@
+* stb3_gnd_loop_linear -- R1a-style unilateral gm amplifier (refs/
+* r1a_unilateral.cir), with the loop instead broken at the GROUND RETURN
+* of the feedback divider (card #460 task 1). XP's "b" terminal (upstream,
+* the current-injection/read side in stban.c's loop mode) is literal
+* circuit ground (node 0): probe=Vp with node_b==0 hits the same
+* CKTrhs[0]/CKTirhs[0] trash-slot hazard fixed for device mode in
+* c931b1f4c -- and, independently of that code hazard, ALSO a genuine
+* mathematical degeneracy of Tian's two-injection method itself (proved
+* in stban.c's own comment where node_a/node_b are resolved, and in the
+* card #460 report): a probe with EITHER terminal at literal ground gives
+* T=0 identically, for every circuit, because the probe's own branch
+* equation V(node_a)-V(node_b)=<injection> either pins the other terminal
+* to the injection value outright, or the injected current has nowhere
+* to go but the probe's own branch.
+*
+* Uses stb/lgprobe.lib (like refs/r1a_unilateral.cir) so both
+* tools/stb.py and tests/test_stb_followups.py's plain-Vprobe conversion
+* (same technique as tests/test_stb_native.py's plain_variant()) can
+* drive it on the SAME break.
+*
+* Since the probe is a 0V branch (never perturbs the DC/AC topology), the
+* Bode return ratio of THIS circuit (probe removed / shorted) is exactly
+* refs/r1a_unilateral.cir's own closed form (R2 and Cn are both simply
+* tied to ground either way):
+*   T(s) = gm * Zo*Zb / (Zo + R1 + Zb), Zo = Ro || 1/(sCo), Zb = R2 || 1/(sCn)
+* tests/test_stb_followups.py checks native .stb against BOTH this
+* closed form (which gives the TRUE, non-degenerate loop gain of the
+* underlying network, independent of where within it you insert a
+* zero-impedance probe) AND the mathematically-correct DEGENERATE T=0
+* that Tian's method itself reports once you probe exactly at ground
+* (independently reproduced with tools/stb.py's real 3-element lgprobe
+* subckt, which has its own separate internal "x" node and still comes
+* out identically degenerate -- see the report). These are two different,
+* both-correct numbers for two different questions ("what is this
+* amplifier's loop gain" vs "what does a ground-terminal probe report");
+* the fixture's job is to show native .stb honestly reports the second
+* one (0), not a small wrong nonzero number (the pre-fix bug).
+.param gm=10m ro=100k co=10p r1=100k r2=100k cn=2p
+.include ../../stb/lgprobe.lib
+Vp vp 0 DC 0 AC 0
+G1 0 o vp vn {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+R1 o vn {r1}
+R2 vn gret {r2}
+XP gret 0 lgprobe
+Cn vn 0 {cn}
+.end

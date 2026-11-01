@@ -1,0 +1,10 @@
+* tr_sw_nohyst_osc -- RC oscillator whose SW discharges the capacitor with VH = 0 (no hysteresis): the switch controls itself from the node it switches
+* stock: FAIL: timestep too small at ~5% of the run (switch controlled by its own node, VH=0)
+* probe: v(c)
+.model swn SW(RON=100 ROFF=1e9 VT=3 VH=0)
+V1 in 0 DC 5
+R1 in c 10k
+C1 c 0 1n IC=0
+S1 c 0 c 0 swn
+.tran 10n 200u uic
+.end

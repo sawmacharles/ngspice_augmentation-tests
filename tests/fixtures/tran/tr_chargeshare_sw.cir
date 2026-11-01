@@ -1,0 +1,16 @@
+* tr_chargeshare_sw -- switched-capacitor charge sharing: 2-phase non-overlapping clocks, SW models with RON = 1 uOhm (time constant ~1 ps) moving charge between 1 uF, 100 nF and 1 uF: zero-resistance-like switches, charge conservation
+* stock: completes at default settings
+* probe: v(c2) v(c3)
+.model swz SW(RON=1u ROFF=1e12 VT=2.5 VH=0.1)
+V1 in 0 DC 5
+Vp1 p1 0 PULSE(0 5 0 5n 5n 800n 2u)
+Vp2 p2 0 PULSE(0 5 1u 5n 5n 800n 2u)
+S1 in c1 p1 0 swz
+S2 c1 c2 p2 0 swz
+S3 c2 c3 p1 0 swz
+C1 c1 0 100n IC=0
+C2 c2 0 1u IC=0
+C3 c3 0 1u IC=0
+.meas tran v3 FIND v(c3) AT=190u
+.tran 10n 200u uic
+.end

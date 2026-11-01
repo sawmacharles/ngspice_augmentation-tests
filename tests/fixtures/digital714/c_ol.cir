@@ -1,0 +1,22 @@
+* 714 c_ol: open-loop buck, digital clock only: d_pwm at fixed duty (control from a DC source), d_buffer, dac_bridge, tanh switches
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=22u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30
+Vin vin 0 DC {vin_v}
+Vc c 0 DC 0.45
+Apwm c d1 mpwm
+.model mpwm d_pwm(cntl_array=[0 1] dc_array=[0 1] frequency={fs} init_phase=0 rise_delay=1n fall_delay=1n)
+Abuf d1 d2 dbuf
+.model dbuf d_buffer(rise_delay=2n fall_delay=3n)
+Adac [d2] [pwm] dacmod
+.model dacmod dac_bridge(out_low=0 out_high=1 t_rise=5n t_fall=5n)
+Rpw pwm 0 1Meg
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0 I = V(sw) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+.ic v(vout)=0 v(cx)=0

@@ -1,0 +1,31 @@
+* pstb_linear.cir -- card #465 test (d): PSTB on a linear (non-switching)
+* feedback loop must equal native .stb within 1e-6 relative. Same
+* topology as refs/r1a_unilateral.cir (a single-pole transconductance
+* amplifier with a resistive feedback divider), but with the probe as a
+* plain top-level 0V V-source (Vprobe, directly addressable by both native
+* .stb and .pstb -- no lgprobe subcircuit, card #465 scope cut: no
+* probe=inst:terminal auto-insert here) and, as in pac_lti.cir (test a),
+* an unrelated periodic drive (Vclk/Rclk/Cclk) so PSS has a genuine period
+* to shoot on. Vp's small DC bias only keeps PSS's "degenerate all-off"
+* guard from rejecting the (linear, so it does not matter numerically)
+* trivial DC operating point; it is AC 0 and plays no role in the loop-gain
+* measurement itself (Tian's two injections are the only excitation during
+* the .pstb sweep).
+.param gm=10m ro=100k co=10p r1=100k r2=100k cn=2p
+
+* unrelated periodic drive, purely so PSS has a period to shoot on
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+* the linear feedback loop under test
+Vp vp 0 DC 0.1 AC 0
+G1 0 o vp vn {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+R1 o fb {r1}
+R2 fb 0 {r2}
+Vprobe fb vn DC 0
+Cn vn 0 {cn}
+
+.end

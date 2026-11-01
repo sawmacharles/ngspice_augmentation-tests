@@ -1,0 +1,7 @@
+* xspice_an_mult: XSPICE code model 'mult' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+Vb b 0 DC 0.2
+A1 [in b] o1 m
+.model m mult(in_gain=[1.0 1.0] out_gain=1.5)
+Rl o1 out 1k
+Co out 0 100p

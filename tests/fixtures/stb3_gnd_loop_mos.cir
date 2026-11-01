@@ -1,0 +1,23 @@
+* stb3_gnd_loop_mos -- a real (nonlinear) MOS1 common-source stage,
+* self-biased through a source-degeneration resistor Rs, with the loop
+* (local feedback through Rs) broken at Rs's OWN ground return -- "an
+* amplifier whose input stage's reference node is the probe" (card #460
+* task 1's second example). XP's "b" terminal (upstream) is literal
+* ground (node 0): same hazard/degeneracy as tests/fixtures/
+* stb3_gnd_loop_linear.cir, but on a genuinely nonlinear device instead
+* of an idealized VCCS. tests/test_stb_followups.py drives this with
+* tools/stb.py (fully independent of this fork's C code, via lgprobe.lib
+* -- its own separate internal "x" node) as the reference, both in this
+* orientation and with a/b swapped (XP 0 gret lgprobe): both must read
+* T=0, matching the algebraic degeneracy proof in stban.c's own comment.
+.include ../../stb/lgprobe.lib
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05
++ cgso=0.3n cgdo=0.3n cgbo=0 cbd=0 cbs=0
+Vdd vdd 0 DC 3.3
+Vin g 0 DC 1.2 AC 0
+Rg g gg 1k
+M1 d gg s 0 nch w=20u l=1u
+Rd vdd d 3k
+Rs s gret 200
+XP gret 0 lgprobe
+.end

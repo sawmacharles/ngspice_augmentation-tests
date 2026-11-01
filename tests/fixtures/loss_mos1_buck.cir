@@ -1,0 +1,54 @@
+* loss_mos1_buck -- small open-loop synchronous buck built from real
+* level=1 MOSFET power switches (native `M` devices, NOT R3/R4/R3d's
+* smooth B-source switches) -- card #481 fixture for tools/loss.py's new
+* MOSFET device coverage (docs/loss.md: "MOSFET terminal-current
+* instrumentation"). Open-loop (fixed-duty, hand-timed dead-time PULSE
+* gate drives, no compensator/feedback loop) -- this fixture exists to
+* validate loss.py's device accounting on a real MOSFET compact model, not
+* to demonstrate a regulated converter design.
+*
+* PMOS high-side (source=vin, so its gate drive is ground-referenced --
+* no floating/bootstrap driver needed for this fixture), NMOS low-side,
+* L-C-R output stage using the same values as R3/R4/R3d (12V nominal,
+* L=10uH Rdcr=10mOhm Cout=100uF Resr=10mOhm Rload=3.3, fs=500kHz) for
+* consistency with the rest of this project's fixtures. Both switches'
+* own intrinsic body-drain diode (bulk tied to source on each, per usual
+* MOSFET convention) supplies the dead-time freewheeling path automatically
+* -- no extra diode needed, unlike loss_diode_buck.cir.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param duty=0.28 dead=20n
+
+.model nch1 nmos level=1 vto=1.0 kp=200u lambda=0.01 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.model pch1 pmos level=1 vto=-1.0 kp=80u  lambda=0.01 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+
+Vin vin 0 DC {vin_v}
+
+* PMOS high-side: source=vin, drain=sw, bulk=source
+Mhs sw g_hs vin vin pch1 w=100000u l=1u
+* NMOS low-side: source=0, drain=sw, bulk=source
+Mls sw g_ls 0 0 nch1 w=50000u l=1u
+
+* hand-timed non-overlapping (dead-time) gate drives, fixed duty, no
+* feedback loop (see header). g_hs active LOW (PMOS): high(=vin, off) most
+* of the period, low(=vin-5, on) during the hs conduction window.
+Vghs g_hs 0 PULSE({vin_v} {vin_v-5} {dead/2} 5n 5n {duty*tclk-dead} {tclk})
+* g_ls active HIGH (NMOS): low(=0, off) except during the ls conduction
+* window, offset past hs's own window plus the dead-time gap.
+Vgls g_ls 0 PULSE(0 5 {duty*tclk+dead/2} 5n 5n {(1-duty)*tclk-2*dead} {tclk})
+
+Csw sw 0 100p
+L1 sw swl 10u IC=0
+Rdcr swl vout 10m
+Resr vout cx 10m
+Cout cx 0 100u IC=0
+Rload vout 0 3.3
+
+.control
+set filetype=ascii
+tran 2n 1.5m 0 uic
+meas tran vout_avg_final AVG v(vout) FROM=1490u TO=1500u
+meas tran vout_max_final MAX v(vout) FROM=1490u TO=1500u
+meas tran vout_min_final MIN v(vout) FROM=1490u TO=1500u
+print vout_avg_final vout_max_final vout_min_final
+.endc
+.end

@@ -1,0 +1,17 @@
+* synchronous buck, two ideal switches with dead time, chargeless body diode; continuous conduction
+.param fs=500k tclk={1/fs}
+Vin vin 0 DC 12
+Shs vin sw ctrlnode ramp SWMOD
+Sls sw 0 ramp ctrlp SWMOD
+Vdt ctrlp ctrlnode DC 0.06
+.model SWMOD SW(vt=0 vh=0.005 ron=10m roff=1Meg)
+D1 0 sw DMOD
+.model DMOD D(IS=1e-9 RS=0.05 N=1.05 CJO=0 VJ=0.7 M=0.5 TT=0)
+L1 sw swl 10u IC=0
+Rdcr swl vout 10m
+Resr vout cx 10m
+Cout cx 0 100u IC=0
+Rload vout 0 3.3
+Vramp ramp 0 PULSE(0 2 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC 0.55 AC 1
+.end

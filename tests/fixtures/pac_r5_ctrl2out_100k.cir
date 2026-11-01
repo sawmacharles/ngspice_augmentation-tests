@@ -1,0 +1,48 @@
+* R5 free-running hysteretic buck -- .pac control-to-output on the
+* free-running orbit (card #489 SECOND pass, plan T6.2, task 5). Same
+* power stage/control as refs/r5_hysteretic_buck.cir (see that file's
+* header for the full circuit history); "control" here is the hysteresis
+* window's own center reference (threshold(q) = vrefn - hys/2 + hys*q),
+* broken out into its own DC=vref/AC=1 source Vrefsrc so a small-signal
+* perturbation of the reference has somewhere to enter -- R5 has no
+* separate compensator/divider loop to break (unlike R3/R4's XP lgprobe
+* splice; see refs/r5_hysteretic_buck.cir's own header), so this is the
+* free-running analogue of "control-to-output" for a direct hysteretic
+* converter: how vout responds to a small perturbation of the comparator's
+* own setpoint.
+* card #493: same fixture as pac_r5_ctrl2out_20k.cir, single point at 100kHz
+* (root-cause investigation of the 150kHz free-running .pac disagreement).
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+Vrefsrc vrefn 0 DC {vref} AC 1
+.ic v(q)=0.5
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+* same construction as refs/r5_hysteretic_buck.cir's Bq, {vref} replaced by
+* V(vrefn) (DC-equal, AC-flagged) so a small-signal perturbation of the
+* comparator's own setpoint is the "control" input this .pac card measures
+* control-to-output against:
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-(V(vrefn)-{hys}/2+{hys}*V(q))))))
+
+.pac 427350 450e-6 vout 200 10 45 1e-4 lin 1 100e3 100e3 method="shoot" solver="td" trigger="q" trigval=0.5 trigdir="rise"
+
+.control
+set filetype=ascii
+run
+wrdata ~/Work/data/ngspice_augmentation/pac/freerun2/r5_ctrl2out_100k.txt v(vout)
+.endc
+.end

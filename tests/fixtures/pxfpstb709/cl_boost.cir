@@ -1,0 +1,38 @@
+* card #709 fixture: CLOSED-LOOP boost, power stage = native IDEAL `sw` low-side switch + chargeless diode (the open-loop boost.cir of this
+* directory, same ramp/comparator: the switch's own differential control pair ctrl+=opout, ctrl-=ramp, vt=0, vh=5 mV), type-I (integrating)
+* compensator (R1in + Cf around the transconductance op-amp, gain 1e5), vref=1 V, divider ra/rb -> Vout = 7.7 V, fs = 500 kHz.
+* The loop is broken by an lgprobe instance XP (a = fbtop downstream, b = vout upstream), needs `.include stb/lgprobe.lib`.
+* Loop gain (analytic, from the open-loop .pxf plant): crossover 1.48 kHz, phase margin 85 deg for cf=10n; cf=6.8n: 2.36 kHz / 81.6 deg and a
+* second crossing at 5.9 kHz / 26 deg (the LC resonance peak of the boost sits at 5-6 kHz).
+.param vin_v=5 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=22u esrval=10m rload=10
+.param ra=6700 rb=1k vref=1
+.param r1=10k cf=10n
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+.include ../../../stb/lgprobe.lib
+.ic v(opout)=0.8 v(compin)=1 v(fbnode)=1 v(fbtop)=7.7 v(vout)=7.7
+
+Vin vin 0 DC {vin_v}
+Rdcr vin vl {rdcr}
+L1 vl sw {lval} IC=1.2
+S1 sw 0 opout ramp SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+D1 sw vout DMOD
+.model DMOD D(IS=1e-9 RS=0.05 N=1.05 CJO=0 VJ=0.7 M=0.5 TT=0)
+Cout vout cx {cval} IC=7.7
+Resr cx 0 {esrval}
+Rload vout 0 {rload}
+
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+R1in fbnode compin {r1}
+C1f compin opout {cf}
+
+Vramp ramp 0 PULSE(0 2 0 {0.97*tclk} {0.03*tclk} 1n {tclk})

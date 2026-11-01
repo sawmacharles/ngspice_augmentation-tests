@@ -1,0 +1,16 @@
+* tr_colpitts -- BJT Colpitts oscillator (~4 MHz), supply ramp as the start-up kick, amplitude limited by the transistor: nonlinear start-up
+* stock: completes at default settings
+* probe: v(c) v(e)
+.model qn NPN(IS=1e-15 BF=120 BR=3 VAF=80 CJE=1p CJC=0.8p TF=0.3n TR=5n RB=50 RC=5 RE=1)
+Vcc vcc 0 PWL(0 0 2u 9 1)
+Rb1 vcc b 47k
+Rb2 b 0 15k
+Cb b 0 100n
+Q1 c b e qn
+Re e 0 1k
+Lc vcc c 10u
+Rlc vcc c 20k
+C1 c e 470p
+C2 e 0 1n
+.tran 5n 40u
+.end

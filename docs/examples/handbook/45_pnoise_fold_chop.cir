@@ -1,0 +1,23 @@
+* 45_pnoise_fold_chop.cir -- handbook example (card #560): `.pnoise` flicker folding (card #556, patch 0110).
+* Body of tests/fixtures/pnoise_fold_chop_res.cir: a 1 kohm resistor with 1/f noise (kf=4e-12, af=2, ef=1) carrying 1 mA, followed by an ideal
+* +-1 square-wave modulator (a chopper, 100 kHz, 1 us edges): out = V(x)*V(sq).  The output density is exactly Sum_q |c_q|^2 S_x(|f - q fs|)
+* (c_q = Fourier coefficients of the trapezoid): see 45_pnoise_fold.py for the closed form.  Rdum/Cd only give the PSS a state.
+.param fs=100k trs=1u
+Idc 0 x DC 1m
+R1 x 0 1k rfl
+.model rfl r kf=4e-12 af=2 ef=1
+Vsq sq 0 PULSE(-1 1 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+Rdum sq d 1k
+Cd d 0 1p
+
+Bchop out 0 V = V(x)*V(sq)
+.pnoise 100k 0 sq 4000 1 50 1e-6 out Vsq lin 1 1k 1k method="shoot" solver="td" dev=1
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pnoise_fold.txt onoise_r1_thermal onoise_r1_1overf onoise_r1 onoise_spectrum
+.endc
+.end

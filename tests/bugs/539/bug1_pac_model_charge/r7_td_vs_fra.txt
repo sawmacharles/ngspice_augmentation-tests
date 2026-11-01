@@ -1,0 +1,37 @@
+R7 .pac/.pstb solver=td (s88, reltol 1e-4, Points 400) vs converged FRA (tools/fra.py transfer/loop, per-point unc in the curves dir)
+ctrl2out
+       500 Hz  engine  -129.86 dB  -175.1 deg | FRA  -17.589 dB    20.09 deg | err -112.3 dB
+      2000 Hz  engine  -128.92 dB  -162.4 deg | FRA  -12.510 dB    48.24 deg | err -116.4 dB
+      5000 Hz  engine  -125.48 dB  -151.9 deg | FRA   -6.128 dB    50.39 deg | err -119.4 dB
+     10000 Hz  engine  -121.19 dB  -174.9 deg | FRA   -1.155 dB    36.47 deg | err -120.0 dB
+     20000 Hz  engine  -124.64 dB   155.9 deg | FRA    3.627 dB    -7.79 deg | err -128.3 dB
+     40000 Hz  engine  -127.63 dB   161.4 deg | FRA   -2.024 dB   -69.66 deg | err -125.6 dB
+     80000 Hz  engine  -128.61 dB   169.5 deg | FRA   -9.690 dB   -84.39 deg | err -118.9 dB
+    200000 Hz  engine  -128.91 dB   175.2 deg | FRA  -18.161 dB   -90.88 deg | err -110.7 dB
+line2out
+       500 Hz  engine   -10.33 dB    -1.2 deg | FRA  -34.937 dB    14.13 deg | err +24.6 dB
+      2000 Hz  engine   -10.14 dB    -5.2 deg | FRA  -31.446 dB    39.81 deg | err +21.3 dB
+      5000 Hz  engine    -9.18 dB   -17.0 deg | FRA  -25.748 dB    45.67 deg | err +16.6 dB
+     10000 Hz  engine    -8.78 dB   -57.8 deg | FRA  -20.929 dB    34.00 deg | err +12.1 dB
+     20000 Hz  engine   -17.49 dB   -99.6 deg | FRA  -16.193 dB    -8.77 deg | err -1.3 dB
+     40000 Hz  engine   -26.27 dB  -101.1 deg | FRA  -21.847 dB   -69.97 deg | err -4.4 dB
+     80000 Hz  engine   -33.21 dB   -96.6 deg | FRA  -29.522 dB   -84.15 deg | err -3.7 dB
+    200000 Hz  engine   -41.46 dB   -92.8 deg | FRA  -38.050 dB   -89.47 deg | err -3.4 dB
+zout
+       500 Hz  engine   -27.74 dB  -172.0 deg | FRA  -57.729 dB  -151.30 deg | err +30.0 dB
+      2000 Hz  engine   -26.14 dB  -152.3 deg | FRA  -51.466 dB   -99.47 deg | err +25.3 dB
+      5000 Hz  engine   -21.12 dB  -138.7 deg | FRA  -41.125 dB   -72.24 deg | err +20.0 dB
+     10000 Hz  engine   -15.72 dB  -164.9 deg | FRA  -31.235 dB   -71.07 deg | err +15.5 dB
+     20000 Hz  engine   -18.69 dB   161.6 deg | FRA  -20.743 dB  -106.36 deg | err +2.0 dB
+     40000 Hz  engine   -21.53 dB   164.5 deg | FRA  -20.437 dB  -163.74 deg | err -1.1 dB
+     80000 Hz  engine   -22.47 dB   171.2 deg | FRA  -22.101 dB  -175.58 deg | err -0.4 dB
+    200000 Hz  engine   -22.76 dB   176.4 deg | FRA  -22.637 dB  -178.64 deg | err -0.1 dB
+loop
+       500 Hz  engine  -194.04 dB   -10.9 deg | FRA   30.123 dB   -21.87 deg | err -224.2 dB
+      2000 Hz  engine  -194.85 dB   -41.0 deg | FRA   25.274 dB   -56.28 deg | err -220.1 dB
+      5000 Hz  engine  -196.77 dB   -87.7 deg | FRA   19.771 dB   -73.13 deg | err -216.5 dB
+     10000 Hz  engine  -199.05 dB  -162.9 deg | FRA   15.678 dB  -103.88 deg | err -214.7 dB
+     20000 Hz  engine  -208.18 dB   108.6 deg | FRA    4.290 dB  -129.63 deg | err -212.5 dB
+     40000 Hz  engine  -213.81 dB    58.3 deg | FRA   -5.568 dB  -118.38 deg | err -208.2 dB
+     80000 Hz  engine  -215.39 dB    29.5 deg | FRA  -12.831 dB  -107.11 deg | err -202.6 dB
+    200000 Hz  engine  -214.49 dB    11.2 deg | FRA  -21.165 dB  -101.94 deg | err -193.3 dB

@@ -1,0 +1,10 @@
+* tr_rc_step -- RC low-pass driven by a pulse: linear sanity deck, exact answer 1-exp(-t/RC) (tau 1 ms)
+* stock: completes at default settings
+* probe: v(out) v(in)
+V1 in 0 PULSE(0 1 100u 1n 1n 2m 4m)
+R1 in out 1k
+C1 out 0 1u
+.meas tran v_at_1m FIND v(out) AT=1.1m
+.meas tran v_at_end FIND v(out) AT=4.9m
+.tran 5u 5m
+.end

@@ -1,0 +1,526 @@
+* f_analog_block_bsim3 -- 60 independent 5T-OTA cells = 300 BSIM3 instances
+* (ngspice_augmentation card #467/#478/#483, plan T9.1/T9.2/T9.3; generated
+* by bench/gen_analog_block.py --tstop-ns 2000.0 --device bsim3
+* -- do not hand-edit, regenerate instead). Synthetic textbook OTA array,
+* synthetic, not derived from any real design.
+* run: ngspice -b <this file> (writes to
+*  ~/Work/data/ngspice_augmentation/accel/bench/f_analog_block_bsim3/, never
+*  into the repo)
+
+.param vdd_v=3.3 vcm=1.65
+
+.model nch3 nmos level=49 version=3.3.0
++ tox=3.5e-9 nch=2.4e17 nsub=5e16
++ vth0=0.5 u0=300 vsat=1.1e5
+
+.model pch3 pmos level=49 version=3.3.0
++ tox=3.5e-9 nch=2.5e17 nsub=5e16
++ vth0=-0.5 u0=100 vsat=1.0e5
+
+Vdd vdd 0 DC {vdd_v}
+Vcm vcm 0 DC {vcm}
+Vbias_tail vbias_tail 0 DC 1.0
+Rbias vbias_tail 0 1Meg
+
+* --- cell 0: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp0 inp0 0 PULSE({vcm} 1.700000 200n 5n 5n 800n 2000n)
+M1_0 outn0 inp0 tail0 0 nch3 w=4u l=0.5u
+M2_0 out0 vcm tail0 0 nch3 w=4u l=0.5u
+M3_0 outn0 outn0 vdd vdd pch3 w=8u l=0.5u
+M4_0 out0 outn0 vdd vdd pch3 w=8u l=0.5u
+M5_0 tail0 vbias_tail 0 0 nch3 w=8u l=1u
+Cload0 out0 0 200f
+* --- cell 1: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp1 inp1 0 PULSE({vcm} 1.700200 200n 5n 5n 800n 2000n)
+M1_1 outn1 inp1 tail1 0 nch3 w=4u l=0.5u
+M2_1 out1 vcm tail1 0 nch3 w=4u l=0.5u
+M3_1 outn1 outn1 vdd vdd pch3 w=8u l=0.5u
+M4_1 out1 outn1 vdd vdd pch3 w=8u l=0.5u
+M5_1 tail1 vbias_tail 0 0 nch3 w=8u l=1u
+Cload1 out1 0 200f
+* --- cell 2: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp2 inp2 0 PULSE({vcm} 1.700400 200n 5n 5n 800n 2000n)
+M1_2 outn2 inp2 tail2 0 nch3 w=4u l=0.5u
+M2_2 out2 vcm tail2 0 nch3 w=4u l=0.5u
+M3_2 outn2 outn2 vdd vdd pch3 w=8u l=0.5u
+M4_2 out2 outn2 vdd vdd pch3 w=8u l=0.5u
+M5_2 tail2 vbias_tail 0 0 nch3 w=8u l=1u
+Cload2 out2 0 200f
+* --- cell 3: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp3 inp3 0 PULSE({vcm} 1.700600 200n 5n 5n 800n 2000n)
+M1_3 outn3 inp3 tail3 0 nch3 w=4u l=0.5u
+M2_3 out3 vcm tail3 0 nch3 w=4u l=0.5u
+M3_3 outn3 outn3 vdd vdd pch3 w=8u l=0.5u
+M4_3 out3 outn3 vdd vdd pch3 w=8u l=0.5u
+M5_3 tail3 vbias_tail 0 0 nch3 w=8u l=1u
+Cload3 out3 0 200f
+* --- cell 4: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp4 inp4 0 PULSE({vcm} 1.700800 200n 5n 5n 800n 2000n)
+M1_4 outn4 inp4 tail4 0 nch3 w=4u l=0.5u
+M2_4 out4 vcm tail4 0 nch3 w=4u l=0.5u
+M3_4 outn4 outn4 vdd vdd pch3 w=8u l=0.5u
+M4_4 out4 outn4 vdd vdd pch3 w=8u l=0.5u
+M5_4 tail4 vbias_tail 0 0 nch3 w=8u l=1u
+Cload4 out4 0 200f
+* --- cell 5: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp5 inp5 0 PULSE({vcm} 1.701000 200n 5n 5n 800n 2000n)
+M1_5 outn5 inp5 tail5 0 nch3 w=4u l=0.5u
+M2_5 out5 vcm tail5 0 nch3 w=4u l=0.5u
+M3_5 outn5 outn5 vdd vdd pch3 w=8u l=0.5u
+M4_5 out5 outn5 vdd vdd pch3 w=8u l=0.5u
+M5_5 tail5 vbias_tail 0 0 nch3 w=8u l=1u
+Cload5 out5 0 200f
+* --- cell 6: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp6 inp6 0 PULSE({vcm} 1.701200 200n 5n 5n 800n 2000n)
+M1_6 outn6 inp6 tail6 0 nch3 w=4u l=0.5u
+M2_6 out6 vcm tail6 0 nch3 w=4u l=0.5u
+M3_6 outn6 outn6 vdd vdd pch3 w=8u l=0.5u
+M4_6 out6 outn6 vdd vdd pch3 w=8u l=0.5u
+M5_6 tail6 vbias_tail 0 0 nch3 w=8u l=1u
+Cload6 out6 0 200f
+* --- cell 7: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp7 inp7 0 PULSE({vcm} 1.701400 200n 5n 5n 800n 2000n)
+M1_7 outn7 inp7 tail7 0 nch3 w=4u l=0.5u
+M2_7 out7 vcm tail7 0 nch3 w=4u l=0.5u
+M3_7 outn7 outn7 vdd vdd pch3 w=8u l=0.5u
+M4_7 out7 outn7 vdd vdd pch3 w=8u l=0.5u
+M5_7 tail7 vbias_tail 0 0 nch3 w=8u l=1u
+Cload7 out7 0 200f
+* --- cell 8: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp8 inp8 0 PULSE({vcm} 1.701600 200n 5n 5n 800n 2000n)
+M1_8 outn8 inp8 tail8 0 nch3 w=4u l=0.5u
+M2_8 out8 vcm tail8 0 nch3 w=4u l=0.5u
+M3_8 outn8 outn8 vdd vdd pch3 w=8u l=0.5u
+M4_8 out8 outn8 vdd vdd pch3 w=8u l=0.5u
+M5_8 tail8 vbias_tail 0 0 nch3 w=8u l=1u
+Cload8 out8 0 200f
+* --- cell 9: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp9 inp9 0 PULSE({vcm} 1.701800 200n 5n 5n 800n 2000n)
+M1_9 outn9 inp9 tail9 0 nch3 w=4u l=0.5u
+M2_9 out9 vcm tail9 0 nch3 w=4u l=0.5u
+M3_9 outn9 outn9 vdd vdd pch3 w=8u l=0.5u
+M4_9 out9 outn9 vdd vdd pch3 w=8u l=0.5u
+M5_9 tail9 vbias_tail 0 0 nch3 w=8u l=1u
+Cload9 out9 0 200f
+* --- cell 10: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp10 inp10 0 PULSE({vcm} 1.702000 200n 5n 5n 800n 2000n)
+M1_10 outn10 inp10 tail10 0 nch3 w=4u l=0.5u
+M2_10 out10 vcm tail10 0 nch3 w=4u l=0.5u
+M3_10 outn10 outn10 vdd vdd pch3 w=8u l=0.5u
+M4_10 out10 outn10 vdd vdd pch3 w=8u l=0.5u
+M5_10 tail10 vbias_tail 0 0 nch3 w=8u l=1u
+Cload10 out10 0 200f
+* --- cell 11: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp11 inp11 0 PULSE({vcm} 1.702200 200n 5n 5n 800n 2000n)
+M1_11 outn11 inp11 tail11 0 nch3 w=4u l=0.5u
+M2_11 out11 vcm tail11 0 nch3 w=4u l=0.5u
+M3_11 outn11 outn11 vdd vdd pch3 w=8u l=0.5u
+M4_11 out11 outn11 vdd vdd pch3 w=8u l=0.5u
+M5_11 tail11 vbias_tail 0 0 nch3 w=8u l=1u
+Cload11 out11 0 200f
+* --- cell 12: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp12 inp12 0 PULSE({vcm} 1.702400 200n 5n 5n 800n 2000n)
+M1_12 outn12 inp12 tail12 0 nch3 w=4u l=0.5u
+M2_12 out12 vcm tail12 0 nch3 w=4u l=0.5u
+M3_12 outn12 outn12 vdd vdd pch3 w=8u l=0.5u
+M4_12 out12 outn12 vdd vdd pch3 w=8u l=0.5u
+M5_12 tail12 vbias_tail 0 0 nch3 w=8u l=1u
+Cload12 out12 0 200f
+* --- cell 13: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp13 inp13 0 PULSE({vcm} 1.702600 200n 5n 5n 800n 2000n)
+M1_13 outn13 inp13 tail13 0 nch3 w=4u l=0.5u
+M2_13 out13 vcm tail13 0 nch3 w=4u l=0.5u
+M3_13 outn13 outn13 vdd vdd pch3 w=8u l=0.5u
+M4_13 out13 outn13 vdd vdd pch3 w=8u l=0.5u
+M5_13 tail13 vbias_tail 0 0 nch3 w=8u l=1u
+Cload13 out13 0 200f
+* --- cell 14: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp14 inp14 0 PULSE({vcm} 1.702800 200n 5n 5n 800n 2000n)
+M1_14 outn14 inp14 tail14 0 nch3 w=4u l=0.5u
+M2_14 out14 vcm tail14 0 nch3 w=4u l=0.5u
+M3_14 outn14 outn14 vdd vdd pch3 w=8u l=0.5u
+M4_14 out14 outn14 vdd vdd pch3 w=8u l=0.5u
+M5_14 tail14 vbias_tail 0 0 nch3 w=8u l=1u
+Cload14 out14 0 200f
+* --- cell 15: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp15 inp15 0 PULSE({vcm} 1.703000 200n 5n 5n 800n 2000n)
+M1_15 outn15 inp15 tail15 0 nch3 w=4u l=0.5u
+M2_15 out15 vcm tail15 0 nch3 w=4u l=0.5u
+M3_15 outn15 outn15 vdd vdd pch3 w=8u l=0.5u
+M4_15 out15 outn15 vdd vdd pch3 w=8u l=0.5u
+M5_15 tail15 vbias_tail 0 0 nch3 w=8u l=1u
+Cload15 out15 0 200f
+* --- cell 16: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp16 inp16 0 PULSE({vcm} 1.703200 200n 5n 5n 800n 2000n)
+M1_16 outn16 inp16 tail16 0 nch3 w=4u l=0.5u
+M2_16 out16 vcm tail16 0 nch3 w=4u l=0.5u
+M3_16 outn16 outn16 vdd vdd pch3 w=8u l=0.5u
+M4_16 out16 outn16 vdd vdd pch3 w=8u l=0.5u
+M5_16 tail16 vbias_tail 0 0 nch3 w=8u l=1u
+Cload16 out16 0 200f
+* --- cell 17: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp17 inp17 0 PULSE({vcm} 1.703400 200n 5n 5n 800n 2000n)
+M1_17 outn17 inp17 tail17 0 nch3 w=4u l=0.5u
+M2_17 out17 vcm tail17 0 nch3 w=4u l=0.5u
+M3_17 outn17 outn17 vdd vdd pch3 w=8u l=0.5u
+M4_17 out17 outn17 vdd vdd pch3 w=8u l=0.5u
+M5_17 tail17 vbias_tail 0 0 nch3 w=8u l=1u
+Cload17 out17 0 200f
+* --- cell 18: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp18 inp18 0 PULSE({vcm} 1.703600 200n 5n 5n 800n 2000n)
+M1_18 outn18 inp18 tail18 0 nch3 w=4u l=0.5u
+M2_18 out18 vcm tail18 0 nch3 w=4u l=0.5u
+M3_18 outn18 outn18 vdd vdd pch3 w=8u l=0.5u
+M4_18 out18 outn18 vdd vdd pch3 w=8u l=0.5u
+M5_18 tail18 vbias_tail 0 0 nch3 w=8u l=1u
+Cload18 out18 0 200f
+* --- cell 19: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp19 inp19 0 PULSE({vcm} 1.703800 200n 5n 5n 800n 2000n)
+M1_19 outn19 inp19 tail19 0 nch3 w=4u l=0.5u
+M2_19 out19 vcm tail19 0 nch3 w=4u l=0.5u
+M3_19 outn19 outn19 vdd vdd pch3 w=8u l=0.5u
+M4_19 out19 outn19 vdd vdd pch3 w=8u l=0.5u
+M5_19 tail19 vbias_tail 0 0 nch3 w=8u l=1u
+Cload19 out19 0 200f
+* --- cell 20: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp20 inp20 0 PULSE({vcm} 1.704000 200n 5n 5n 800n 2000n)
+M1_20 outn20 inp20 tail20 0 nch3 w=4u l=0.5u
+M2_20 out20 vcm tail20 0 nch3 w=4u l=0.5u
+M3_20 outn20 outn20 vdd vdd pch3 w=8u l=0.5u
+M4_20 out20 outn20 vdd vdd pch3 w=8u l=0.5u
+M5_20 tail20 vbias_tail 0 0 nch3 w=8u l=1u
+Cload20 out20 0 200f
+* --- cell 21: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp21 inp21 0 PULSE({vcm} 1.704200 200n 5n 5n 800n 2000n)
+M1_21 outn21 inp21 tail21 0 nch3 w=4u l=0.5u
+M2_21 out21 vcm tail21 0 nch3 w=4u l=0.5u
+M3_21 outn21 outn21 vdd vdd pch3 w=8u l=0.5u
+M4_21 out21 outn21 vdd vdd pch3 w=8u l=0.5u
+M5_21 tail21 vbias_tail 0 0 nch3 w=8u l=1u
+Cload21 out21 0 200f
+* --- cell 22: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp22 inp22 0 PULSE({vcm} 1.704400 200n 5n 5n 800n 2000n)
+M1_22 outn22 inp22 tail22 0 nch3 w=4u l=0.5u
+M2_22 out22 vcm tail22 0 nch3 w=4u l=0.5u
+M3_22 outn22 outn22 vdd vdd pch3 w=8u l=0.5u
+M4_22 out22 outn22 vdd vdd pch3 w=8u l=0.5u
+M5_22 tail22 vbias_tail 0 0 nch3 w=8u l=1u
+Cload22 out22 0 200f
+* --- cell 23: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp23 inp23 0 PULSE({vcm} 1.704600 200n 5n 5n 800n 2000n)
+M1_23 outn23 inp23 tail23 0 nch3 w=4u l=0.5u
+M2_23 out23 vcm tail23 0 nch3 w=4u l=0.5u
+M3_23 outn23 outn23 vdd vdd pch3 w=8u l=0.5u
+M4_23 out23 outn23 vdd vdd pch3 w=8u l=0.5u
+M5_23 tail23 vbias_tail 0 0 nch3 w=8u l=1u
+Cload23 out23 0 200f
+* --- cell 24: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp24 inp24 0 PULSE({vcm} 1.704800 200n 5n 5n 800n 2000n)
+M1_24 outn24 inp24 tail24 0 nch3 w=4u l=0.5u
+M2_24 out24 vcm tail24 0 nch3 w=4u l=0.5u
+M3_24 outn24 outn24 vdd vdd pch3 w=8u l=0.5u
+M4_24 out24 outn24 vdd vdd pch3 w=8u l=0.5u
+M5_24 tail24 vbias_tail 0 0 nch3 w=8u l=1u
+Cload24 out24 0 200f
+* --- cell 25: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp25 inp25 0 PULSE({vcm} 1.705000 200n 5n 5n 800n 2000n)
+M1_25 outn25 inp25 tail25 0 nch3 w=4u l=0.5u
+M2_25 out25 vcm tail25 0 nch3 w=4u l=0.5u
+M3_25 outn25 outn25 vdd vdd pch3 w=8u l=0.5u
+M4_25 out25 outn25 vdd vdd pch3 w=8u l=0.5u
+M5_25 tail25 vbias_tail 0 0 nch3 w=8u l=1u
+Cload25 out25 0 200f
+* --- cell 26: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp26 inp26 0 PULSE({vcm} 1.705200 200n 5n 5n 800n 2000n)
+M1_26 outn26 inp26 tail26 0 nch3 w=4u l=0.5u
+M2_26 out26 vcm tail26 0 nch3 w=4u l=0.5u
+M3_26 outn26 outn26 vdd vdd pch3 w=8u l=0.5u
+M4_26 out26 outn26 vdd vdd pch3 w=8u l=0.5u
+M5_26 tail26 vbias_tail 0 0 nch3 w=8u l=1u
+Cload26 out26 0 200f
+* --- cell 27: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp27 inp27 0 PULSE({vcm} 1.705400 200n 5n 5n 800n 2000n)
+M1_27 outn27 inp27 tail27 0 nch3 w=4u l=0.5u
+M2_27 out27 vcm tail27 0 nch3 w=4u l=0.5u
+M3_27 outn27 outn27 vdd vdd pch3 w=8u l=0.5u
+M4_27 out27 outn27 vdd vdd pch3 w=8u l=0.5u
+M5_27 tail27 vbias_tail 0 0 nch3 w=8u l=1u
+Cload27 out27 0 200f
+* --- cell 28: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp28 inp28 0 PULSE({vcm} 1.705600 200n 5n 5n 800n 2000n)
+M1_28 outn28 inp28 tail28 0 nch3 w=4u l=0.5u
+M2_28 out28 vcm tail28 0 nch3 w=4u l=0.5u
+M3_28 outn28 outn28 vdd vdd pch3 w=8u l=0.5u
+M4_28 out28 outn28 vdd vdd pch3 w=8u l=0.5u
+M5_28 tail28 vbias_tail 0 0 nch3 w=8u l=1u
+Cload28 out28 0 200f
+* --- cell 29: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp29 inp29 0 PULSE({vcm} 1.705800 200n 5n 5n 800n 2000n)
+M1_29 outn29 inp29 tail29 0 nch3 w=4u l=0.5u
+M2_29 out29 vcm tail29 0 nch3 w=4u l=0.5u
+M3_29 outn29 outn29 vdd vdd pch3 w=8u l=0.5u
+M4_29 out29 outn29 vdd vdd pch3 w=8u l=0.5u
+M5_29 tail29 vbias_tail 0 0 nch3 w=8u l=1u
+Cload29 out29 0 200f
+* --- cell 30: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp30 inp30 0 PULSE({vcm} 1.706000 200n 5n 5n 800n 2000n)
+M1_30 outn30 inp30 tail30 0 nch3 w=4u l=0.5u
+M2_30 out30 vcm tail30 0 nch3 w=4u l=0.5u
+M3_30 outn30 outn30 vdd vdd pch3 w=8u l=0.5u
+M4_30 out30 outn30 vdd vdd pch3 w=8u l=0.5u
+M5_30 tail30 vbias_tail 0 0 nch3 w=8u l=1u
+Cload30 out30 0 200f
+* --- cell 31: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp31 inp31 0 PULSE({vcm} 1.706200 200n 5n 5n 800n 2000n)
+M1_31 outn31 inp31 tail31 0 nch3 w=4u l=0.5u
+M2_31 out31 vcm tail31 0 nch3 w=4u l=0.5u
+M3_31 outn31 outn31 vdd vdd pch3 w=8u l=0.5u
+M4_31 out31 outn31 vdd vdd pch3 w=8u l=0.5u
+M5_31 tail31 vbias_tail 0 0 nch3 w=8u l=1u
+Cload31 out31 0 200f
+* --- cell 32: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp32 inp32 0 PULSE({vcm} 1.706400 200n 5n 5n 800n 2000n)
+M1_32 outn32 inp32 tail32 0 nch3 w=4u l=0.5u
+M2_32 out32 vcm tail32 0 nch3 w=4u l=0.5u
+M3_32 outn32 outn32 vdd vdd pch3 w=8u l=0.5u
+M4_32 out32 outn32 vdd vdd pch3 w=8u l=0.5u
+M5_32 tail32 vbias_tail 0 0 nch3 w=8u l=1u
+Cload32 out32 0 200f
+* --- cell 33: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp33 inp33 0 PULSE({vcm} 1.706600 200n 5n 5n 800n 2000n)
+M1_33 outn33 inp33 tail33 0 nch3 w=4u l=0.5u
+M2_33 out33 vcm tail33 0 nch3 w=4u l=0.5u
+M3_33 outn33 outn33 vdd vdd pch3 w=8u l=0.5u
+M4_33 out33 outn33 vdd vdd pch3 w=8u l=0.5u
+M5_33 tail33 vbias_tail 0 0 nch3 w=8u l=1u
+Cload33 out33 0 200f
+* --- cell 34: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp34 inp34 0 PULSE({vcm} 1.706800 200n 5n 5n 800n 2000n)
+M1_34 outn34 inp34 tail34 0 nch3 w=4u l=0.5u
+M2_34 out34 vcm tail34 0 nch3 w=4u l=0.5u
+M3_34 outn34 outn34 vdd vdd pch3 w=8u l=0.5u
+M4_34 out34 outn34 vdd vdd pch3 w=8u l=0.5u
+M5_34 tail34 vbias_tail 0 0 nch3 w=8u l=1u
+Cload34 out34 0 200f
+* --- cell 35: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp35 inp35 0 PULSE({vcm} 1.707000 200n 5n 5n 800n 2000n)
+M1_35 outn35 inp35 tail35 0 nch3 w=4u l=0.5u
+M2_35 out35 vcm tail35 0 nch3 w=4u l=0.5u
+M3_35 outn35 outn35 vdd vdd pch3 w=8u l=0.5u
+M4_35 out35 outn35 vdd vdd pch3 w=8u l=0.5u
+M5_35 tail35 vbias_tail 0 0 nch3 w=8u l=1u
+Cload35 out35 0 200f
+* --- cell 36: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp36 inp36 0 PULSE({vcm} 1.707200 200n 5n 5n 800n 2000n)
+M1_36 outn36 inp36 tail36 0 nch3 w=4u l=0.5u
+M2_36 out36 vcm tail36 0 nch3 w=4u l=0.5u
+M3_36 outn36 outn36 vdd vdd pch3 w=8u l=0.5u
+M4_36 out36 outn36 vdd vdd pch3 w=8u l=0.5u
+M5_36 tail36 vbias_tail 0 0 nch3 w=8u l=1u
+Cload36 out36 0 200f
+* --- cell 37: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp37 inp37 0 PULSE({vcm} 1.707400 200n 5n 5n 800n 2000n)
+M1_37 outn37 inp37 tail37 0 nch3 w=4u l=0.5u
+M2_37 out37 vcm tail37 0 nch3 w=4u l=0.5u
+M3_37 outn37 outn37 vdd vdd pch3 w=8u l=0.5u
+M4_37 out37 outn37 vdd vdd pch3 w=8u l=0.5u
+M5_37 tail37 vbias_tail 0 0 nch3 w=8u l=1u
+Cload37 out37 0 200f
+* --- cell 38: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp38 inp38 0 PULSE({vcm} 1.707600 200n 5n 5n 800n 2000n)
+M1_38 outn38 inp38 tail38 0 nch3 w=4u l=0.5u
+M2_38 out38 vcm tail38 0 nch3 w=4u l=0.5u
+M3_38 outn38 outn38 vdd vdd pch3 w=8u l=0.5u
+M4_38 out38 outn38 vdd vdd pch3 w=8u l=0.5u
+M5_38 tail38 vbias_tail 0 0 nch3 w=8u l=1u
+Cload38 out38 0 200f
+* --- cell 39: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp39 inp39 0 PULSE({vcm} 1.707800 200n 5n 5n 800n 2000n)
+M1_39 outn39 inp39 tail39 0 nch3 w=4u l=0.5u
+M2_39 out39 vcm tail39 0 nch3 w=4u l=0.5u
+M3_39 outn39 outn39 vdd vdd pch3 w=8u l=0.5u
+M4_39 out39 outn39 vdd vdd pch3 w=8u l=0.5u
+M5_39 tail39 vbias_tail 0 0 nch3 w=8u l=1u
+Cload39 out39 0 200f
+* --- cell 40: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp40 inp40 0 PULSE({vcm} 1.708000 200n 5n 5n 800n 2000n)
+M1_40 outn40 inp40 tail40 0 nch3 w=4u l=0.5u
+M2_40 out40 vcm tail40 0 nch3 w=4u l=0.5u
+M3_40 outn40 outn40 vdd vdd pch3 w=8u l=0.5u
+M4_40 out40 outn40 vdd vdd pch3 w=8u l=0.5u
+M5_40 tail40 vbias_tail 0 0 nch3 w=8u l=1u
+Cload40 out40 0 200f
+* --- cell 41: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp41 inp41 0 PULSE({vcm} 1.708200 200n 5n 5n 800n 2000n)
+M1_41 outn41 inp41 tail41 0 nch3 w=4u l=0.5u
+M2_41 out41 vcm tail41 0 nch3 w=4u l=0.5u
+M3_41 outn41 outn41 vdd vdd pch3 w=8u l=0.5u
+M4_41 out41 outn41 vdd vdd pch3 w=8u l=0.5u
+M5_41 tail41 vbias_tail 0 0 nch3 w=8u l=1u
+Cload41 out41 0 200f
+* --- cell 42: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp42 inp42 0 PULSE({vcm} 1.708400 200n 5n 5n 800n 2000n)
+M1_42 outn42 inp42 tail42 0 nch3 w=4u l=0.5u
+M2_42 out42 vcm tail42 0 nch3 w=4u l=0.5u
+M3_42 outn42 outn42 vdd vdd pch3 w=8u l=0.5u
+M4_42 out42 outn42 vdd vdd pch3 w=8u l=0.5u
+M5_42 tail42 vbias_tail 0 0 nch3 w=8u l=1u
+Cload42 out42 0 200f
+* --- cell 43: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp43 inp43 0 PULSE({vcm} 1.708600 200n 5n 5n 800n 2000n)
+M1_43 outn43 inp43 tail43 0 nch3 w=4u l=0.5u
+M2_43 out43 vcm tail43 0 nch3 w=4u l=0.5u
+M3_43 outn43 outn43 vdd vdd pch3 w=8u l=0.5u
+M4_43 out43 outn43 vdd vdd pch3 w=8u l=0.5u
+M5_43 tail43 vbias_tail 0 0 nch3 w=8u l=1u
+Cload43 out43 0 200f
+* --- cell 44: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp44 inp44 0 PULSE({vcm} 1.708800 200n 5n 5n 800n 2000n)
+M1_44 outn44 inp44 tail44 0 nch3 w=4u l=0.5u
+M2_44 out44 vcm tail44 0 nch3 w=4u l=0.5u
+M3_44 outn44 outn44 vdd vdd pch3 w=8u l=0.5u
+M4_44 out44 outn44 vdd vdd pch3 w=8u l=0.5u
+M5_44 tail44 vbias_tail 0 0 nch3 w=8u l=1u
+Cload44 out44 0 200f
+* --- cell 45: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp45 inp45 0 PULSE({vcm} 1.709000 200n 5n 5n 800n 2000n)
+M1_45 outn45 inp45 tail45 0 nch3 w=4u l=0.5u
+M2_45 out45 vcm tail45 0 nch3 w=4u l=0.5u
+M3_45 outn45 outn45 vdd vdd pch3 w=8u l=0.5u
+M4_45 out45 outn45 vdd vdd pch3 w=8u l=0.5u
+M5_45 tail45 vbias_tail 0 0 nch3 w=8u l=1u
+Cload45 out45 0 200f
+* --- cell 46: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp46 inp46 0 PULSE({vcm} 1.709200 200n 5n 5n 800n 2000n)
+M1_46 outn46 inp46 tail46 0 nch3 w=4u l=0.5u
+M2_46 out46 vcm tail46 0 nch3 w=4u l=0.5u
+M3_46 outn46 outn46 vdd vdd pch3 w=8u l=0.5u
+M4_46 out46 outn46 vdd vdd pch3 w=8u l=0.5u
+M5_46 tail46 vbias_tail 0 0 nch3 w=8u l=1u
+Cload46 out46 0 200f
+* --- cell 47: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp47 inp47 0 PULSE({vcm} 1.709400 200n 5n 5n 800n 2000n)
+M1_47 outn47 inp47 tail47 0 nch3 w=4u l=0.5u
+M2_47 out47 vcm tail47 0 nch3 w=4u l=0.5u
+M3_47 outn47 outn47 vdd vdd pch3 w=8u l=0.5u
+M4_47 out47 outn47 vdd vdd pch3 w=8u l=0.5u
+M5_47 tail47 vbias_tail 0 0 nch3 w=8u l=1u
+Cload47 out47 0 200f
+* --- cell 48: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp48 inp48 0 PULSE({vcm} 1.709600 200n 5n 5n 800n 2000n)
+M1_48 outn48 inp48 tail48 0 nch3 w=4u l=0.5u
+M2_48 out48 vcm tail48 0 nch3 w=4u l=0.5u
+M3_48 outn48 outn48 vdd vdd pch3 w=8u l=0.5u
+M4_48 out48 outn48 vdd vdd pch3 w=8u l=0.5u
+M5_48 tail48 vbias_tail 0 0 nch3 w=8u l=1u
+Cload48 out48 0 200f
+* --- cell 49: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp49 inp49 0 PULSE({vcm} 1.709800 200n 5n 5n 800n 2000n)
+M1_49 outn49 inp49 tail49 0 nch3 w=4u l=0.5u
+M2_49 out49 vcm tail49 0 nch3 w=4u l=0.5u
+M3_49 outn49 outn49 vdd vdd pch3 w=8u l=0.5u
+M4_49 out49 outn49 vdd vdd pch3 w=8u l=0.5u
+M5_49 tail49 vbias_tail 0 0 nch3 w=8u l=1u
+Cload49 out49 0 200f
+* --- cell 50: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp50 inp50 0 PULSE({vcm} 1.710000 200n 5n 5n 800n 2000n)
+M1_50 outn50 inp50 tail50 0 nch3 w=4u l=0.5u
+M2_50 out50 vcm tail50 0 nch3 w=4u l=0.5u
+M3_50 outn50 outn50 vdd vdd pch3 w=8u l=0.5u
+M4_50 out50 outn50 vdd vdd pch3 w=8u l=0.5u
+M5_50 tail50 vbias_tail 0 0 nch3 w=8u l=1u
+Cload50 out50 0 200f
+* --- cell 51: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp51 inp51 0 PULSE({vcm} 1.710200 200n 5n 5n 800n 2000n)
+M1_51 outn51 inp51 tail51 0 nch3 w=4u l=0.5u
+M2_51 out51 vcm tail51 0 nch3 w=4u l=0.5u
+M3_51 outn51 outn51 vdd vdd pch3 w=8u l=0.5u
+M4_51 out51 outn51 vdd vdd pch3 w=8u l=0.5u
+M5_51 tail51 vbias_tail 0 0 nch3 w=8u l=1u
+Cload51 out51 0 200f
+* --- cell 52: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp52 inp52 0 PULSE({vcm} 1.710400 200n 5n 5n 800n 2000n)
+M1_52 outn52 inp52 tail52 0 nch3 w=4u l=0.5u
+M2_52 out52 vcm tail52 0 nch3 w=4u l=0.5u
+M3_52 outn52 outn52 vdd vdd pch3 w=8u l=0.5u
+M4_52 out52 outn52 vdd vdd pch3 w=8u l=0.5u
+M5_52 tail52 vbias_tail 0 0 nch3 w=8u l=1u
+Cload52 out52 0 200f
+* --- cell 53: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp53 inp53 0 PULSE({vcm} 1.710600 200n 5n 5n 800n 2000n)
+M1_53 outn53 inp53 tail53 0 nch3 w=4u l=0.5u
+M2_53 out53 vcm tail53 0 nch3 w=4u l=0.5u
+M3_53 outn53 outn53 vdd vdd pch3 w=8u l=0.5u
+M4_53 out53 outn53 vdd vdd pch3 w=8u l=0.5u
+M5_53 tail53 vbias_tail 0 0 nch3 w=8u l=1u
+Cload53 out53 0 200f
+* --- cell 54: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp54 inp54 0 PULSE({vcm} 1.710800 200n 5n 5n 800n 2000n)
+M1_54 outn54 inp54 tail54 0 nch3 w=4u l=0.5u
+M2_54 out54 vcm tail54 0 nch3 w=4u l=0.5u
+M3_54 outn54 outn54 vdd vdd pch3 w=8u l=0.5u
+M4_54 out54 outn54 vdd vdd pch3 w=8u l=0.5u
+M5_54 tail54 vbias_tail 0 0 nch3 w=8u l=1u
+Cload54 out54 0 200f
+* --- cell 55: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp55 inp55 0 PULSE({vcm} 1.711000 200n 5n 5n 800n 2000n)
+M1_55 outn55 inp55 tail55 0 nch3 w=4u l=0.5u
+M2_55 out55 vcm tail55 0 nch3 w=4u l=0.5u
+M3_55 outn55 outn55 vdd vdd pch3 w=8u l=0.5u
+M4_55 out55 outn55 vdd vdd pch3 w=8u l=0.5u
+M5_55 tail55 vbias_tail 0 0 nch3 w=8u l=1u
+Cload55 out55 0 200f
+* --- cell 56: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp56 inp56 0 PULSE({vcm} 1.711200 200n 5n 5n 800n 2000n)
+M1_56 outn56 inp56 tail56 0 nch3 w=4u l=0.5u
+M2_56 out56 vcm tail56 0 nch3 w=4u l=0.5u
+M3_56 outn56 outn56 vdd vdd pch3 w=8u l=0.5u
+M4_56 out56 outn56 vdd vdd pch3 w=8u l=0.5u
+M5_56 tail56 vbias_tail 0 0 nch3 w=8u l=1u
+Cload56 out56 0 200f
+* --- cell 57: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp57 inp57 0 PULSE({vcm} 1.711400 200n 5n 5n 800n 2000n)
+M1_57 outn57 inp57 tail57 0 nch3 w=4u l=0.5u
+M2_57 out57 vcm tail57 0 nch3 w=4u l=0.5u
+M3_57 outn57 outn57 vdd vdd pch3 w=8u l=0.5u
+M4_57 out57 outn57 vdd vdd pch3 w=8u l=0.5u
+M5_57 tail57 vbias_tail 0 0 nch3 w=8u l=1u
+Cload57 out57 0 200f
+* --- cell 58: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp58 inp58 0 PULSE({vcm} 1.711600 200n 5n 5n 800n 2000n)
+M1_58 outn58 inp58 tail58 0 nch3 w=4u l=0.5u
+M2_58 out58 vcm tail58 0 nch3 w=4u l=0.5u
+M3_58 outn58 outn58 vdd vdd pch3 w=8u l=0.5u
+M4_58 out58 outn58 vdd vdd pch3 w=8u l=0.5u
+M5_58 tail58 vbias_tail 0 0 nch3 w=8u l=1u
+Cload58 out58 0 200f
+* --- cell 59: 5T OTA (M1/M2 diff pair, M3/M4 PMOS mirror load, M5 NMOS tail) ---
+Vinp59 inp59 0 PULSE({vcm} 1.711800 200n 5n 5n 800n 2000n)
+M1_59 outn59 inp59 tail59 0 nch3 w=4u l=0.5u
+M2_59 out59 vcm tail59 0 nch3 w=4u l=0.5u
+M3_59 outn59 outn59 vdd vdd pch3 w=8u l=0.5u
+M4_59 out59 outn59 vdd vdd pch3 w=8u l=0.5u
+M5_59 tail59 vbias_tail 0 0 nch3 w=8u l=1u
+Cload59 out59 0 200f
+
+.tran 0.5n 2000.0n 0
+.options reltol=1e-3
+
+.control
+set filetype=ascii
+rusage cputime
+run
+rusage cputime
+meas tran wave_out0_mid find v(out0) at=1000.0n
+meas tran wave_out0_end find v(out0) at=1990.0n
+meas tran wave_out30_mid find v(out30) at=1000.0n
+meas tran wave_out30_end find v(out30) at=1990.0n
+meas tran wave_out59_mid find v(out59) at=1000.0n
+meas tran wave_out59_end find v(out59) at=1990.0n
+meas tran wave_out0_settle AVG v(out0) FROM=1500.0n TO=2000.0n
+print wave_out0_mid wave_out0_end
+wrdata $HOME/Work/data/ngspice_augmentation/accel/bench/f_analog_block_bsim3/wave.txt v(out0) v(out30) v(out59)
+rusage cputime
+quit
+.endc
+.end

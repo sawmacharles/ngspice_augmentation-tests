@@ -1,0 +1,6 @@
+* xspice_an_s_xfer: XSPICE code model 's_xfer' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 PULSE(0 1 0 100n 100n 4.9u 10u)
+A1 in o1 m
+.model m s_xfer(num_coeff=[1] den_coeff=[2.5e-12 2.2e-6 1] int_ic=[0 0])
+Rl o1 out 1k
+Co out 0 100p

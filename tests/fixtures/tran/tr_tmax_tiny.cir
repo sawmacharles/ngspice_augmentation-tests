@@ -1,0 +1,8 @@
+* tr_tmax_tiny -- very small tmax relative to the span: tmax = 2 ns on a 400 us run with an RC (200k forced points) -- cost scales with the step ceiling, not the dynamics
+* stock: completes at default settings
+* probe: v(out)
+V1 in 0 PULSE(0 1 10u 100n 100n 100u 300u)
+R1 in out 1k
+C1 out 0 10n
+.tran 2n 400u 0 2n
+.end

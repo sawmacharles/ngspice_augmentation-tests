@@ -1,0 +1,9 @@
+# card #716: pinned perturbed-PSS references (tools/pac_perturbed.py sweep --backend pss --no-step-check --max-procs 1, binary
+# w716 = commit 76d2687e6 tree of the WIP chain, ~/Work/data/ngspice_augmentation/716/ref/{buckp,buckc}_pss3); deck f_Hz dB deg of v(vl)
+# tra_buckp: --inject source:Vin --amplitude 0.3; tra_buckc: --inject source:Vctrl (default amplitude 0.05); amplitude halving <= 0.0008 dB
+tra_buckp 20000 -3.879496 -21.53480
+tra_buckp 50000 -9.245596 -160.53231
+tra_buckp 100000 -24.540730 175.10230
+tra_buckc 20000 19.065233 -21.53683
+tra_buckc 50000 13.698605 -160.53737
+tra_buckc 100000 -1.596852 175.08478

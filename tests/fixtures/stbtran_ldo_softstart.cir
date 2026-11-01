@@ -1,0 +1,78 @@
+* stbtran_ldo_softstart.cir -- LDO-style loop with a soft-start reference
+* ramp, for tools/stb_tran.py (card #497). Nonlinear pass device (a tanh
+* VCCS, Bpass) so loop gain genuinely varies with the operating point the
+* soft-start ramp is driving through -- a linear-everywhere LDO (like
+* docs/examples/a_ldo_loop_lgprobe.cir) would give the same PM/GM at every
+* t_k regardless of whether stb_tran.py's freeze mechanism actually works,
+* which would not exercise the tool.
+*
+* Topology: error amp G1 (single dominant pole, Rp1/Cp1) compares the
+* soft-start ramp Vss against the feedback node fb; its output ea drives a
+* nonlinear pass device Bpass (current from vin into vout, gm2*tanh(k2*ea)
+* -- saturating, so its incremental gm depends on the DC operating point);
+* Rout/Cout/Resr is the output filter+load; Rf1/Rf2 the feedback divider.
+* Vprobe (native .stb probe, a plain 0V source) sits in the feedback wire
+* between fb (downstream) and fbtop (upstream), same a/b convention as
+* docs/examples/b_ldo_loop_native.cir.
+*
+* Vss PWL(0 0 {tss} {vref_final} 2m {vref_final}) is the ONLY exogenous
+* time-varying source -- the thing tools/stb_tran.py's --freeze evaluates
+* and holds fixed at each t_k. Everything else (ea, vout, fb -- all the
+* energy-storage/loop states) is left to the frozen deck's own `op` Newton
+* solve, per docs/stb-tran.md's documented quasi-static trade-off.
+*
+* MEASURED (this build, aaba50ba3f49-s46, card #497):
+*   tran 50n 1.2m 0 uic: v(vout) rises with the ramp, small resonant
+*   overshoot to 3.0265 V at t=514us (PM ~17-20 deg through the ramp is a
+*   real, moderate margin, not textbook-huge), settles to 2.995537 V by
+*   t~600us and stays flat (2.995537 V at 600/800/1000/1100/1200 us).
+*   v(vss) is exactly the PWL ramp (90mV at 100us, 225mV at 250us, as
+*   .param below implies -- 0.45*100/500 and 0.45*250/500).
+*   Frozen DC-op .stb (Vss held at a fixed DC value, native .stb,
+*   "dec 30 1 1e8"): vss=0.45 (final) -> PM 19.56 deg at 60744 Hz, no GM
+*   crossing; vss=0.09 (t=100us's value) -> PM 17.29 deg at 81379 Hz;
+*   vss=0.225 (t=250us's value) -> PM 17.58 deg at 77327 Hz; vss=0.36
+*   (t=400us's value) -> PM 18.37 deg at 69192 Hz -- a real, ~35% shift in
+*   crossover frequency and ~2.3 deg of PM across the ramp, confirming this
+*   fixture's nonlinearity is not negligible.
+*
+* Run standalone: ngspice -b stbtran_ldo_softstart.cir
+* Run via stb_tran.py:
+*   NGSPICE_AUG=<fork>/bin/ngspice python3 tools/stb_tran.py \
+*     tests/fixtures/stbtran_ldo_softstart.cir --probe Vprobe --freeze Vss \
+*     --times "10u,100u,250u,400u,1000u" --sweep "dec 30 1 1e8"
+
+.param vin_v=5
+.param gm1=2m rp1=200k cp1=50p
+.param gm2=0.15 vth2=0 k2=3
+.param rout=30 esr=20m cout=10u
+.param rf1=68k rf2=12k
+.param tss=500u vref_final=0.45
+
+Vin vin 0 DC {vin_v}
+Vss vss 0 PWL(0 0 {tss} {vref_final} 2m {vref_final})
+G1 0 ea vss fb {gm1}
+Rp1 ea 0 {rp1}
+Cp1 ea 0 {cp1}
+
+Bpass vin vout I = {gm2}*tanh({k2}*(V(ea)-{vth2}))
+
+Rout vout 0 {rout}
+Cout vout esrnode {cout}
+Resr esrnode 0 {esr}
+
+Rf1 vout fbtop {rf1}
+Rf2 fbtop 0 {rf2}
+
+Vprobe fb fbtop DC 0
+
+.control
+tran 50n 1.2m 0 uic
+meas tran vout_600 FIND v(vout) AT=600u
+meas tran vout_1200 FIND v(vout) AT=1200u
+meas tran vout_max MAX v(vout) FROM=0 TO=1.2m
+print vout_600 vout_1200 vout_max
+write ~/Work/data/ngspice_augmentation/stb_tran/fixture-standalone/stbtran_ldo_softstart.raw
+wrdata ~/Work/data/ngspice_augmentation/stb_tran/fixture-standalone/stbtran_ldo_softstart.txt v(vout) v(vss) v(ea) v(fb)
+.endc
+.end

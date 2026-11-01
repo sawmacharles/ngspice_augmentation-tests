@@ -1,0 +1,17 @@
+* tr_bjt_astable -- BJT astable multivibrator (2N2222-like, 5 V, Rb 47k, C 1 nF, ~66 us period), 8 periods: hard regenerative edges; .ic breaks the symmetry
+* stock: completes at default settings
+* probe: v(c1) v(c2) v(b1)
+.model qn NPN(IS=1e-15 BF=120 BR=3 VAF=80 CJE=1p CJC=0.8p TF=0.3n TR=5n RB=50 RC=5 RE=1)
+Vcc vcc 0 DC 5
+Rc1 vcc c1 1k
+Rc2 vcc c2 1k
+Rb1 vcc b1 47k
+Rb2 vcc b2 47k
+C1 c1 b2 1n
+C2 c2 b1 1n
+Q1 c1 b1 0 qn
+Q2 c2 b2 0 qn
+.ic v(c1)=0.2 v(c2)=5 v(b1)=0.75 v(b2)=0
+.meas tran c1_max MAX v(c1) FROM=200u TO=500u
+.tran 20n 500u
+.end

@@ -1,0 +1,10 @@
+* tr_rlc_underdamped -- series RLC step response, Q ~ 3.2, f0 5 kHz: ringing with exact solution; checks damping of the integration method
+* stock: completes at default settings
+* probe: v(c) l1#branch
+V1 in 0 PULSE(0 1 20u 1n 1n 1 2)
+R1 in a 10
+L1 a c 1m IC=0
+C1 c 0 1u IC=0
+.meas tran vpk MAX v(c) FROM=0 TO=2m
+.tran 2u 2m
+.end

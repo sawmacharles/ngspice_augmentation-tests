@@ -1,0 +1,15 @@
+* pnoise_fold_chop_lp.cir -- card #556: R1 (thermal + 1/f) || Cx -> chop sq1 (+-1, 50 %) -> R2 C2 low-pass -> chop sq2 (0/1, 30 %, delayed
+* 0.2 T).  H(t,f) is complex and periodic, so the sideband gains |G_q| and |G_-q| differ: the sign of the f -/+ q fs pairing is tested.
+* Closed form (harmonic transfer by hand): test_pnoise.py ref_chop_lp().
+.param fs=100k trs=1u
+Idc 0 x DC 1m
+R1 x 0 1k rfl
+Cx x 0 1.5915n
+.model rfl r kf=4e-12 af=2 ef=1
+Vsq1 sq1 0 PULSE(-1 1 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+Vsq2 sq2 0 PULSE(0 1 {0.2/fs} {trs} {trs} {0.3/fs-trs} {1/fs})
+Ba a 0 V = V(x)*V(sq1)
+R2 a b 1k noisy=0
+C2 b 0 3.183n
+Bout out 0 V = V(b)*V(sq2)
+.end

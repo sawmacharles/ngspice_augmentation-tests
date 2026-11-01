@@ -1,0 +1,11 @@
+* tr_tline_mismatch -- lossless transmission line (T element, Z0 50, TD 2 ns) from a 50 ohm source into a 200 ohm || 2 pF load (reflection coefficient 0.6): delayed-history interpolation, breakpoints at echoes
+* stock: completes at default settings
+* probe: v(a) v(b)
+V1 in 0 PULSE(0 1 1n 100p 100p 20n 60n)
+Rs in a 50
+T1 a 0 b 0 Z0=50 TD=2n
+RL b 0 200
+Cl b 0 2p
+.meas tran vb FIND v(b) AT=30n
+.tran 20p 60n
+.end

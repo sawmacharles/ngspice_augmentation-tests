@@ -1,0 +1,27 @@
+* tr_ring5_l1 -- 5-stage CMOS ring oscillator with level-1 MOSFETs (3.3 V, 10 fF loads, period ~1 ns), .ic breaks the symmetry: fast regenerative edges, many cycles
+* stock: completes at default settings
+* probe: v(n1) v(n3)
+.model nm1 NMOS(LEVEL=1 VTO=0.7 KP=120u LAMBDA=0.03 CGSO=0.3n CGDO=0.3n CBD=10f CBS=10f PB=0.8)
+.model pm1 PMOS(LEVEL=1 VTO=-0.7 KP=50u LAMBDA=0.03 CGSO=0.3n CGDO=0.3n CBD=10f CBS=10f PB=0.8)
+
+Vdd vdd 0 DC 3.3
+Mp1 n2 n1 vdd vdd pm1 W=25u L=1u
+Mn1 n2 n1 0 0 nm1 W=10u L=1u
+Cl1 n2 0 50f
+Mp2 n3 n2 vdd vdd pm1 W=25u L=1u
+Mn2 n3 n2 0 0 nm1 W=10u L=1u
+Cl2 n3 0 50f
+Mp3 n4 n3 vdd vdd pm1 W=25u L=1u
+Mn3 n4 n3 0 0 nm1 W=10u L=1u
+Cl3 n4 0 50f
+Mp4 n5 n4 vdd vdd pm1 W=25u L=1u
+Mn4 n5 n4 0 0 nm1 W=10u L=1u
+Cl4 n5 0 50f
+Mp5 n1 n5 vdd vdd pm1 W=25u L=1u
+Mn5 n1 n5 0 0 nm1 W=10u L=1u
+Cl5 n1 0 50f
+
+.ic v(n1)=0 v(n2)=3.3 v(n3)=0 v(n4)=3.3 v(n5)=0
+.tran 5p 30n
+.meas tran vmax MAX v(n1) FROM=10n TO=30n
+.end

@@ -1,0 +1,47 @@
+* tr_rc_ladder20 -- 20-section RC ladder (diffusion line) step response: many time constants spread over a decade or two, sparse linear system
+* stock: completes at default settings
+* probe: v(n20) v(n10)
+V1 in 0 PULSE(0 1 1u 10n 10n 1 2)
+R0 in n1 100
+C0 n1 0 100n
+R1 n1 n2 100
+C1 n2 0 105n
+R2 n2 n3 100
+C2 n3 0 110n
+R3 n3 n4 100
+C3 n4 0 114n
+R4 n4 n5 100
+C4 n5 0 120n
+R5 n5 n6 100
+C5 n6 0 125n
+R6 n6 n7 100
+C6 n7 0 130n
+R7 n7 n8 100
+C7 n8 0 135n
+R8 n8 n9 100
+C8 n9 0 140n
+R9 n9 n10 100
+C9 n10 0 145n
+R10 n10 n11 100
+C10 n11 0 150n
+R11 n11 n12 100
+C11 n12 0 155n
+R12 n12 n13 100
+C12 n13 0 160n
+R13 n13 n14 100
+C13 n14 0 165n
+R14 n14 n15 100
+C14 n15 0 170n
+R15 n15 n16 100
+C15 n16 0 175n
+R16 n16 n17 100
+C16 n17 0 180n
+R17 n17 n18 100
+C17 n18 0 185n
+R18 n18 n19 100
+C18 n19 0 190n
+R19 n19 n20 100
+C19 n20 0 195n
+
+.tran 100n 2m
+.end

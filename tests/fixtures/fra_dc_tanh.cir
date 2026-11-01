@@ -1,0 +1,26 @@
+* fra_dc_tanh.cir -- memoryless nonlinear stage with a closed-form, bias-dependent
+* small-signal gain (card #485, tests/test_fra_dc.py).
+*
+* Bout implements out = tanh(in), a B-source (voltage-controlled voltage, zero
+* output impedance, no dynamics -- "out" has no frequency dependence at all, so
+* mode "transfer"'s sideband-0 gain at ANY injection frequency should equal the
+* LOCAL SLOPE of tanh at the DC bias point Vdc, to first order in the injection
+* amplitude:
+*
+*   H(jw) = d(tanh(v))/dv |_{v=Vdc} = 1 - tanh(Vdc)^2 = sech^2(Vdc)   (real, w-independent)
+*
+* This is the simplest possible circuit whose small-signal transfer function
+* depends on the DC operating point at all -- a LINEAR circuit's small-signal
+* response is identical regardless of bias (superposition), so it cannot expose
+* the "VO hard-coded to 0" bug (card #485) even if injected on a biased source;
+* this one can, and its analytic answer is a two-line Python check
+* (tests/test_fra_dc.py's tanh_gain()), not a transcendental/numeric one.
+*
+* Vdc is swept by test_fra_dc.py via `alterparam vdc = <value>` before each run
+* (0.0, 0.5, 1.2 -- see that file for why: 0.0 is the one bias point where the
+* VO=0 bug is invisible, by construction, so it alone would not be a red-proof).
+.param vdc=0.5
+Vin in 0 DC {vdc} AC 1
+Bout out 0 V = tanh(V(in))
+Rout out 0 1meg
+.end

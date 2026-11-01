@@ -1,0 +1,28 @@
+* xspice_dig_seq: digital/hybrid XSPICE models under .pss (card #551); STATEFILE is replaced by the test
+Vclk clk 0 PULSE(0 1 0 5n 5n 495n 1u)
+Vone one 0 DC 1
+Vzero zero 0 DC 0
+Abr [clk one zero] [dclk dhi dlo] adc1
+.model adc1 adc_bridge(in_low=0.3 in_high=0.7)
+At1 dhi dclk dlo dlo dq1 dq1n tf
+At2 dhi dq1n dlo dlo dq2 dq2n tf
+.model tf d_tff(clk_delay=1n set_delay=1n reset_delay=1n ic=0)
+Ajk dhi dhi dclk NULL NULL jq jqn mjk
+.model mjk d_jkff(clk_delay=2n set_delay=1n reset_delay=1n ic=0)
+Asr dq1 dq2 dclk NULL NULL sq sqn msr
+.model msr d_srff(clk_delay=2n set_delay=1n reset_delay=1n ic=0)
+Adl dq1 dclk NULL NULL lq lqn mdl
+.model mdl d_dlatch(data_delay=2n enable_delay=2n set_delay=1n reset_delay=1n ic=0)
+Asl dq1 dq2n dhi NULL NULL slq slqn msl
+.model msl d_srlatch(sr_delay=2n enable_delay=2n set_delay=1n reset_delay=1n ic=0)
+Add dq2 dclk NULL NULL fq fqn mdf
+.model mdf d_dff(clk_delay=2n set_delay=1n reset_delay=1n ic=0)
+Abo [jq sq lq slq fq] [a0 a1 a2 a3 a4] dac1
+Rd0 a0 out 1k
+Rd1 a1 out 1.6k
+Rd2 a2 out 2.5k
+Rd3 a3 out 4k
+Rd4 a4 out 6.3k
+.model dac1 dac_bridge(out_low=0 out_high=1 t_rise=50n t_fall=50n)
+Co out 0 100p
+Rl out 0 10k

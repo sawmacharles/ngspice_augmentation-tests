@@ -1,0 +1,13 @@
+* pnoise708/cs_bsim4.cir -- card #708: BSIM4 common-source stage, gate clocked at 100 kHz through Rg (0.6 <-> 1.4 V trapezoid, 1 us edges),
+* Rd 20k / Cl 100p load: the device goes from weak conduction (vd 1.63 V, id 8 uA) to triode (vd 0.32 V, id 74 uA) every period, so both
+* the channel-noise density and the output pole (Rd || rds with Cl) are periodic: a genuine LPTV with modulated device noise.
+* Noise toggles: ntn (BSIM4 ntnoi: channel thermal on/off), tnm (tnoimod), flicker off (noia=noib=noic=0).  Output v(d).
+.param fs=100k trs=1u ntn=1 tnm=0
+Vdd vdd 0 1.8
+Rd vdd d 20k
+Cl d 0 100p
+Rg gs g 10k
+Vg gs 0 PULSE(0.6 1.4 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+.model nch nmos level=54 version=4.8.2 mobmod=0 capmod=2 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0 toxe=3e-9 toxp=3e-9 toxm=3e-9 vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6 u0=300 vsat=1.1e5 cgso=2e-10 cgdo=2e-10 cgbo=1e-11 cgsl=1e-10 cgdl=1e-10 cf=1e-10 xpart=0 noia=0 noib=0 noic=0 tnoimod={tnm} ntnoi={ntn}
+M1 d g 0 0 nch w=1u l=0.5u
+.end

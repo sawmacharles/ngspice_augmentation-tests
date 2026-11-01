@@ -1,0 +1,87 @@
+* R3 voltage-mode buck, AVERAGED (state-space-averaged) linear small-signal stand-in,
+* DETUNED compensator (card #471, plan T10.3, 2026-09-28).
+*
+* AVERAGING (documented per the card's brief -- "build an averaged-model version of
+* refs/r3_vm_buck.cir's power stage + PWM gain + the same type-III compensator"):
+* refs/r3_vm_buck.cir's switch network (Bhs/Bls, smooth tanh) and PWM comparator (Bcmp,
+* smooth tanh of opout vs a PULSE-approximated sawtooth ramp) are both replaced by ONE
+* linear VCVS, Eavg, implementing the standard state-space-averaged PWM-switch model:
+* the average voltage at the switch node over one switching period is
+*   v(sw)_avg = d * Vin,  d = duty cycle = v(opout) / Vramp   (small-signal, d in [0,1])
+* so Eavg sw 0 opout 0 {vin_v/vramp} reproduces Gvd(s)*Gpwm's DC gain and (because
+* everything downstream -- L1/Rdcr/Resr/Cout/Rload -- is already linear, unchanged from
+* the real deck) the same second-order Gvd(s) = Vin*(1+s*Esr*C)/(1+s*(L/Rload)+s^2*L*C)
+* the real deck's own header derives by hand. This is a linearization about the
+* converter's DC operating point, not a small-signal perturbation of a periodic orbit
+* (that is native .stb's own restriction, docs/stb.md; using .pstb once it exists, per
+* this file's header note in compopt.py, would remove this restriction) -- it drops
+* every switching-frequency/sampling effect (no half-fs peaking, no ripple), which is
+* exactly why tests/test_compopt.py's R3 case also runs the FRA reference tool
+* (tools/fra.py, via compopt.verify_with_fra) on the REAL switching deck as a second,
+* independent check and reports the difference, per this card's brief ("averaged !=
+* switching near fs/2").
+*
+* VALIDATION (card #471 design pass, 2026-09-28): at the real deck's OWN nominal
+* compensator values (r2=27.51k c2=2.299n, everything else unchanged from
+* refs/r3_vm_buck.cir's header), this averaged model's native .stb gives
+*   PM = 38.10 deg @ fc = 33660 Hz (falling 0 dB crossing)
+* which matches the ALREADY-MEASURED real switching-deck FRA result from card #452's
+* own reference curves (~/Work/data/ngspice_augmentation/fra/curves/SUMMARY.md,
+* r3_vm_buck row: "T: PM=38.45 deg @ fc=33462.7 Hz") to 0.6% in frequency and 0.35 deg in
+* phase margin -- far closer than the real deck's own header comment's hand-estimate
+* (PM~=73.5 deg @ fc=50 kHz, explicitly labelled there as "ESTIMATE ... not measured"),
+* which the card #452 FRA sweep had already shown was inaccurate. This averaged model is
+* therefore a good linear stand-in for THIS card's purpose (tuning the compensator
+* against a fast, native-.stb-compatible circuit), even though it is not exact near fs/2
+* (500 kHz) by construction.
+*
+* SWEEP NOTE: this compensator's R1in/C1f branch forms a near-integrator (pole close to
+* the origin); native .stb's low_f_positive_feedback check (Re(T) < 0 at the lowest swept
+* frequency) gives FALSE positives for several otherwise-reasonable r2/c2 values when
+* fstart is as low as 10 Hz (Re(T) genuinely straddles 0 there, a near-integrator artifact,
+* not a real instability -- checked by hand for several (r2,c2) pairs during this card's
+* design pass). fstart=500 Hz (matching tools/fra_curves.py's own fs/1000 lower bound for
+* this same deck family) avoids the artifact for every point tried; tests/test_compopt.py
+* and docs/compopt.md's worked example both use "dec 40 500 1e7" for this reason.
+*
+* DETUNED starting point (this file's own values, below): r2=100k (vs nominal 27.51k),
+* c2=0.3n (vs nominal 2.299n) gives PM = -5.39 deg @ 55841 Hz -- unstable (negative
+* margin), a genuinely bad compensator, not merely off-target. tools/compopt.py tunes r2
+* and c2 (bounds r2=1e3:1e6:log, c2=1e-11:1e-7:log) back to fc=34000 Hz, PM=38 deg (close
+* to the real design's own nominal point, i.e. "recover a working design" -- see
+* docs/compopt.md's worked example for the real optimizer run and
+* tools/compopt.verify_with_fra's independent FRA comparison on the real switching deck).
+.param vin_v=12 fs=500k
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=100k r3=101.7 c1=36.35p c2=0.3n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+
+Vin vin 0 DC {vin_v}
+* averaged switch network: duty-cycle-controlled linear source replaces Bhs/Bls + Bcmp/ramp
+Eavg sw 0 opout 0 {vin_v/vramp}
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval}
+Rload vout 0 {rload}
+
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+.end

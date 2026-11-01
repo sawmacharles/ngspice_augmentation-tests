@@ -1,0 +1,9 @@
+* pnoise_track_hold_mos1.cir -- card #544: pnoise_track_hold_slow.cir with a MOS1 switch (gate-driven, body 0, overlap caps, no flicker) instead of the tanh conductance; closed form of test_pnoise.th_analytic_S0 with R = Rtrack + Ron
+.param rtrack=50k c=50p fclk=10k duty=0.2
+Vin vin 0 DC 1 SIN(1 0.05 {fclk} 0 0)
+Rtrack vin trnode {rtrack}
+Vclk clk 0 PULSE(0 3 0 5n 5n {duty*(1/fclk)} {1/fclk})
+.model nsw nmos level=1 vto=0.7 kp=2e-4 gamma=0.4 phi=0.65 lambda=0 tox=2e-8 cgso=2e-10 cgdo=2e-10 cgbo=0 cj=0 kf=0
+Msw trnode clk vout 0 nsw w=10u l=1u
+C1 vout 0 {c}
+.end

@@ -1,0 +1,7 @@
+* xspice_an_divide: XSPICE code model 'divide' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+Vb b 0 DC 2
+A1 in b o1 m
+.model m divide(num_gain=1 den_gain=1 den_lower_limit=0.1 den_domain=0.1)
+Rl o1 out 1k
+Co out 0 100p

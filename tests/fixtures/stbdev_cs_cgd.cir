@@ -1,0 +1,15 @@
+* stbdev_cs_cgd -- single NMOS common-source stage with a large discrete
+* Cgd, giving a local loop through Cgd that no wire-break (loop-mode) probe
+* can reach without breaking the gate-drain net itself (Tian applicability
+* case 2, Fig. 11 -- research/cadence-stb-pstb.md sec 2.6). No body effect
+* (bulk tied to source, both grounded): gmbs = 0 here, isolating the pure
+* gm-only case. card #459 (plan T3.4), tests/test_stb_device.py.
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05
++ cgso=0 cgdo=0 cgbo=0 cbd=0 cbs=0
+Vdd vdd 0 DC 3.3
+Vin g 0 DC 1.0 AC 0
+Rg g gg 1k
+M1 d gg 0 0 nch w=20u l=1u
+Rd vdd d 10k
+Cgd gg d 1n
+.end

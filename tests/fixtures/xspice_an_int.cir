@@ -1,0 +1,8 @@
+* xspice_an_int: XSPICE code model 'int' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 PULSE(0 1 0 100n 100n 4.9u 10u)
+A0 [in o1] e1 sm
+.model sm summer(in_gain=[1 -1])
+A1 e1 o1 m
+.model m int(in_offset=0.0 gain=1e5 out_lower_limit=-1e9 out_upper_limit=1e9 limit_range=1e-3 out_ic=0)
+Rl o1 out 1k
+Co out 0 100p

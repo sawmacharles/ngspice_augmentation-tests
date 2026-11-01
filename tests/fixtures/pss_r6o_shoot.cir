@@ -1,0 +1,60 @@
+* pss_r6o_shoot.cir -- "R6o": OPEN-LOOP ideal-switch PWM buck power stage
+* (no compensator/feedback loop). Card #494 (plan T6.1, saltation).
+*
+* WHY: the CLOSED-loop ideal-switch buck (pss_r6s_shoot.cir, R6/R3's power
+* stage + compensator, PWM comparator built from `sw`'s own differential
+* control pair) was found NOT to converge under `.pss method=shoot`'s
+* forced tight (reltol=1e-5) Newton/period-integration pass even after
+* several convergence-aid attempts (see the card #494 report and
+* pss_r6s_shoot.cir's own header for the full trail) -- a genuine,
+* separate robustness gap from the saltation math itself, not chased
+* further this pass given the time available.
+*
+* This fixture isolates the actual saltation-relevant quantity that CAN be
+* built and validated this pass: the DIRECT dependence of the switching
+* instant on an AC-injected control input (the "when the control node sees
+* the injection" clause of this card's own brief, and research/
+* simplis-pop-ac.md S6 Stage 2's explicit input term
+* "-(f+-f-)(dh/du . b e^{jwt})/(...)"). Vctrl here is an INDEPENDENT source
+* (not fed back from Vout -- no compensator, no op-amp), so the switching
+* surface h = Vctrl(t) - Vramp(t) depends on the circuit STATE (Vout, IL)
+* NOT AT ALL (grad_x h = 0 identically) but DOES depend directly on the
+* injected input u=Vctrl (dh/du = 1) and on time through the ramp
+* (dh/dt = -dramp/dt != 0) -- i.e. this is the cleanest possible non-
+* trivial saltation case: pure INPUT-driven event-time sensitivity (the
+* classic PWM modulator gain Fm), with the STATE-feedback saltation term
+* (the R2 case, where grad_x h = 0 too but so is dh/du, a fully trivial
+* identity case) and the CLOSED-LOOP combined case (R6/R6s, both terms
+* nonzero, blocked on the convergence gap above) deliberately factored
+* out. Same power stage (L/C/Esr/Rload, Ron/Roff, Vramp, fs) as
+* r6_vm_buck_ideal.cir/r3_vm_buck.cir.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param vramp=2 vctrl_dc=0.55
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+
+Shs vin sw ctrlnode ramp SWMOD
+Sls sw 0   ramp ctrlnode SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC {vctrl_dc}
+
+.control
+set filetype=ascii
+pss 500e3 100e-6 vout 200 10 150 1e-6 uic method=shoot
+write ~/Work/data/ngspice_augmentation/pss/r6o_vm_buck/r6o_shoot.raw
+wrdata ~/Work/data/ngspice_augmentation/pss/r6o_vm_buck/r6o_shoot.txt v(vout) i(L1)
+.endc
+.end

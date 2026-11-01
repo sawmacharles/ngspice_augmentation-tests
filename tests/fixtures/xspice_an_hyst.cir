@@ -1,0 +1,6 @@
+* xspice_an_hyst: XSPICE code model 'hyst' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+A1 in o1 m
+.model m hyst(in_low=-0.3 in_high=0.3 hyst=0.2 out_lower_limit=0 out_upper_limit=1 input_domain=0.05 fraction=FALSE)
+Rl o1 out 1k
+Co out 0 100p

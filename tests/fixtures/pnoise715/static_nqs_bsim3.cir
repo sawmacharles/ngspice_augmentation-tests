@@ -1,0 +1,16 @@
+* pnoise715/static_nqs_bsim3.cir -- card #715 static check: BSIM3v3.3 common-source stage with a NON-QUASI-STATIC channel (nqsmod={nq},
+* W/L 40u/20u) at a DC gate bias (Vin 0.9 V through Rs 1k, Rd 20k, Cl 50f), PSS period from a 100 kHz clock on an unrelated net.  Unlike
+* BSIM4, BSIM3's .ac/.noise stamp the linearised transient NQS model (b3acld.c, nqsmod=1 and acnqsmod=0: the charge node with gtau and
+* j*omega), so plain .noise is an independent reference for td .pnoise dev=1 per generator, including the relaxation state.  kf=0.
+.param nq=1
+.model nb3 nmos level=8 version=3.3.0 tox=5e-9 vth0=0.5 cgso=2e-10 cgdo=2e-10 cj=1e-3 capmod=3 nqsmod={nq} noimod=1 kf=0
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k noisy=0
+Cclk clkgnd 0 1p
+Vdd vdd 0 3
+Vin in 0 DC 0.9 AC 1
+Rs in g 1k
+M1 out g 0 0 nb3 w=40u l=20u as=4p ad=4p ps=10u pd=10u
+Rd vdd out 20k
+Cl out 0 50f
+.end

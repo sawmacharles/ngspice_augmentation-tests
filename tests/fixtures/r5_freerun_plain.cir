@@ -1,0 +1,24 @@
+* r5_freerun_plain -- card #557 fixture: the R5 free-running hysteretic buck of pac_r5_ctrl2out.cir WITHOUT analysis cards, control block or AC flags
+* (tests/test_pxf.py and tests/test_pnoise.py append `.pxf` / `.pnoise` / `.pac` with trigger="q" trigval=0.5 trigdir="rise" and, for a single source,
+* ` AC 1` on Vin or Vrefsrc).  Sources: Vin (line), Vrefsrc (the hysteresis window's setpoint).  Output vout; resistors Rdcr Resr Rload are the noise sources.
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+Vrefsrc vrefn 0 DC {vref}
+.ic v(q)=0.5
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-(V(vrefn)-{hys}/2+{hys}*V(q))))))

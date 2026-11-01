@@ -1,0 +1,18 @@
+* 18_checkpoint circuit body -- switched-RC (refs/r2_switched_rc.cir topology)
+.param rin=10k rsw=10k c=1n fclk=100k duty=0.5
+.param per={1/fclk}
+Vin vin 0 DC 1 AC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx sw1 {rsw}
+Sswitch sw1 0 clk 0 SWCLK
+.model SWCLK SW(vt=0.5 vh=0.05 ron=1e-4 roff=1e9)
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*per} {per})
+.tran 25n 600u 0 uic
+.print tran v(vx)
+.control
+loadstate ckpt_18.bin
+meas tran vx_at_600u FIND v(vx) AT=600u
+print vx_at_600u
+.endc
+.end

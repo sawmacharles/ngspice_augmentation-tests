@@ -1,0 +1,32 @@
+* 714 a_ff: open-loop buck, latch PWM: a d_osc clock sets a d_dff (D=1) at 0.05 T (rising edge of a d_osc, duty 0.95, init_phase 0), an XSPICE comparator (ramp > control -> adc_bridge) resets it asynchronously; d_inverter pair, dac_bridge, tanh switches
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=22u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30
+Vin vin 0 DC {vin_v}
+Vc c 0 DC 0.45
+Vramp ramp 0 PULSE(1 0 0 {0.02*tclk} {0.98*tclk} 1n {tclk})
+Ecmp cmpv 0 ramp c 1
+Acmp [cmpv] [rst] adccmp
+.model adccmp adc_bridge(in_low=0 in_high=0 rise_delay=1n fall_delay=1n)
+Vnc nc 0 DC 0.5
+Aosc nc clk mosc
+.model mosc d_osc(cntl_array=[0 1] freq_array=[{fs} {fs}] duty_cycle=0.95 init_phase=0 rise_delay=1n fall_delay=1n)
+Apu one pu
+.model pu d_pullup(load=0)
+Aff one clk NULL rst q nq dff
+.model dff d_dff(clk_delay=2n set_delay=2n reset_delay=3n rise_delay=1n fall_delay=1n)
+Ainv1 q qb inv1
+Ainv2 qb q2 inv1
+.model inv1 d_inverter(rise_delay=1.5n fall_delay=2.5n)
+Adac [q2] [pwm] dacmod
+.model dacmod dac_bridge(out_low=0 out_high=1 t_rise=5n t_fall=5n)
+Rpw pwm 0 1Meg
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0 I = V(sw) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+.ic v(vout)=0 v(cx)=0

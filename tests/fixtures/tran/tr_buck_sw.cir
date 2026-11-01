@@ -1,0 +1,16 @@
+* tr_buck_sw -- buck converter, SW-model high-side switch driven by PULSE (100 kHz, D=0.4, 12 V -> 5 V), freewheel Schottky-like diode, 100 cycles
+* stock: completes at default settings
+* probe: v(out) l1#branch
+.model dsch D(IS=1e-8 N=1.05 RS=0.05 CJO=50p TT=5n BV=40 IBV=1m)
+.model swm SW(RON=10m ROFF=10Meg VT=2.5 VH=0.5)
+Vin in 0 DC 12
+Vg g 0 PULSE(0 5 0 20n 20n 4u 10u)
+S1 in sw g 0 swm
+D1 0 sw dsch
+L1 sw o 22u IC=0
+Resr o out 20m
+C1 out 0 47u IC=0
+RL out 0 5
+.meas tran vavg AVG v(out) FROM=0.9m TO=1m
+.tran 50n 1m uic
+.end

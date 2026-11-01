@@ -1,0 +1,24 @@
+* yield_mos.cir -- behavioral square-law MOS current stage, card #474
+* (tools/yieldest.py validation, nonlinear case (b)). id = 0.5*Kp*max(Vgs -
+* Vth, 0)^2 with Vgs fixed nominal = 1.0 V; Kp AND Vth both carry
+* independent Gaussian variation. This is a B-source, NOT a real transistor
+* model (like docs/mc.md's diffpair example, this is stated plainly, never
+* presented as a real device) -- chosen so the ngspice-evaluated current is
+* EXACTLY the formula tests/test_yield.py's independent Python 2-D
+* numerical-integration ground truth also uses (bit-for-bit the same
+* nonlinearity on both sides, so a mismatch would be this tool's bug, not a
+* model-fidelity gap). Because Kp multiplies (Vgs-Vth)^2, the failure
+* boundary in (Kp,Vth) space is a curve, not reducible to a threshold on a
+* single Gaussian combination -- true Pf needs 2-D numerical integration.
+* Sign convention checked empirically (2026-09-29): "Bid id 0 I = -1*(...)"
+* gives a POSITIVE V(id) of magnitude 0.5*Kp*max(Vgs-Vth,0)^2 (Rload=1 ohm
+* converts the current to a directly-readable voltage).
+Bid id 0 I = -1*(0.5*@@KP@@*(max((1.0-@@VTH@@),0))**2)
+Rload id 0 1
+.control
+op
+let idv = v(id)
+set idvs = $&idv
+echo MCMEAS id=$idvs
+.endc
+.end

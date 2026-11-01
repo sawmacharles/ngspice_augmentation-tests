@@ -1,0 +1,68 @@
+* pac_r6_ctrl2out.cir / pac_r6_line2out.cir / pac_r6_zout.cir -- card #494
+* (plan T6.1, saltation) baseline-failure fixtures: R6 body (ideal `sw` +
+* XSPICE d_pwm/dac_bridge PWM, refs/r6_vm_buck_ideal.cir), same pattern as
+* tests/fixtures/pac_r3_ctrl2out.cir -- no .control block (test_pac.py-style
+* harnesses append their own .pac/.pstb card), XP fbtop vout lgprobe
+* replaced by a plain Vprobe fbtop vout DC 0 (same substitution
+* test_pac.py's _r3_r4_plainprobe_deck() applies to refs/r6_vm_buck_ideal.cir
+* directly for the .pstb checks -- this file exists so a .pac harness that
+* wants the SAME injection points test_pac.py's R3 ctrl2out/line2out/zout
+* checks use doesn't have to hand-edit refs/ at runtime).
+*   ctrl2out (this file): Vctrl spliced in series between the type-III
+*     compensator's output (opout) and the XSPICE d_pwm code model's control
+*     input -- the direct analogue of pac_r3_ctrl2out.cir's Vctrl splice
+*     ahead of Bcmp, except here the "comparator" is the d_pwm model itself
+*     (its cntl_array=[0,vramp] duty mapping IS R6's PWM comparator).
+*   line2out: AC 1 added to the existing Vin (see pac_r6_line2out.cir).
+*   zout: Iinj, a new shunt current source at vout, AC 1 (see
+*     pac_r6_zout.cir).
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v} AC 1
+.ic v(opout)=0.55 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0
+
+Shs vin sw pwmp 0 SWMOD
+Sls sw 0   pwmn 0 SWMOD
+.model SWMOD SW(vt=0.5 vh=0.05 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III), PWM
+Vprobe fbtop vout DC 0
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vctrl ctrlnode opout DC 0
+apwm ctrlnode dout pwmmod
+.model pwmmod d_pwm(frequency={fs} cntl_array=[0 {vramp}] dc_array=[0 1] init_phase=0
++ rise_delay=1e-9 fall_delay=1e-9)
+adac [~dout dout] [pwmn pwmp] dacmod
+.model dacmod dac_bridge(out_low=0 out_high=1 out_undef=0.5
++ input_load=5.0e-12 t_rise=2e-9 t_fall=2e-9)
+
+.end

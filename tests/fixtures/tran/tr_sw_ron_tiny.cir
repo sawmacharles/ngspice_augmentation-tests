@@ -1,0 +1,13 @@
+* tr_sw_ron_tiny -- ideal-ish switch RON = 1e-12 ohm, ROFF = 1e12 (24 decades of conductance) shorting a charged 1 nF into an LC every 10 us
+* stock: completes at default settings
+* probe: v(a) v(m)
+.model swt SW(RON=1e-12 ROFF=1e12 VT=2.5 VH=0)
+V1 in 0 DC 5
+Vg g 0 PULSE(0 5 1u 1n 1n 4u 10u)
+R1 in a 1k
+C1 a 0 1n
+S1 a m g 0 swt
+L1 m n 1u IC=0
+C2 n 0 1n IC=0
+.tran 10n 100u
+.end

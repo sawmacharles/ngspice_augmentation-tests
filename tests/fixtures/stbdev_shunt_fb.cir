@@ -1,0 +1,23 @@
+* stbdev_shunt_fb -- self-biased NMOS common-source stage with SHUNT
+* (drain-to-gate) resistive feedback: the ONLY loop in this circuit is the
+* wire through Rf. Cgd is zero, so there is no local loop through the
+* device itself (Tian applicability case 1/3 -- research/
+* cadence-stb-pstb.md sec 2.6): device-mode T on M1 and loop-mode T on the
+* Rf wire should agree, since M1's gm is the only gain in the only loop.
+* card #459 (plan T3.4), tests/test_stb_device.py check 2.
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05
++ cgso=0 cgdo=0 cgbo=0 cbd=0 cbs=0
+Vdd vdd 0 DC 3.3
+Vin in 0 DC 0.9 AC 0
+Rin in g 10k
+Rf g d 200k
+M1 d g 0 0 nch w=40u l=1u
+Rd vdd d 5k
+* this shunt-feedback bias point has a second, spurious all-off DC solution
+* (Vgs settles below Vto through Rf/Rin alone with Id=0); .nodeset steers
+* Newton to the intended ON equilibrium regardless of whether the caller
+* runs a standalone `op` before `stb` or relies on STBan()'s own internal
+* CKTop() (found while validating card #459 -- the two are NOT guaranteed
+* to land on the same solution without this hint on a bistable circuit).
+.nodeset v(g)=0.9 v(d)=1.5
+.end

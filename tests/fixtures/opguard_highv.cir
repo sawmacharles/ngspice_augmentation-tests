@@ -1,0 +1,13 @@
+* opguard_highv: 1 A into 1 Gohm through a diode, no voltage source (card #642)
+* The true OP has a node near 1e9 V, beyond the guard's 1e6 x 1 V bound; Newton fails at first, so the ladder keeps
+* going and, with nothing else sane, the guard must restore the first result: same answer as before, plus a warning.
+I1 0 a 1
+D1 a b dmod
+R1 b 0 1g
+.model dmod d is=1e-14
+.control
+set numdgt=12
+op
+print all
+.endc
+.end

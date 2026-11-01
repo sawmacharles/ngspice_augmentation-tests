@@ -1,0 +1,16 @@
+* pac_lti.cir -- card #465 test (a): LTI circuit, PSS driven by an
+* UNRELATED periodic source (so a nontrivial period exists), sideband-0
+* PAC (time-domain, solver=td) must equal .ac on the true small-signal
+* path (Vin -> out), which never sees the clock network at all.
+* unrelated periodic drive, purely so PSS has a period to shoot on
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+* the true (time-invariant) small-signal path under test
+Vin in 0 DC 1 AC 1
+Rin in out 1k
+Cout out 0 10n
+Rload out 0 10k
+
+.end

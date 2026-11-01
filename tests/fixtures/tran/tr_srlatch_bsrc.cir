@@ -1,0 +1,9 @@
+* tr_srlatch_bsrc -- SR latch of two delay-less B-source NOR gates (V = cond ? 0 : 1) cross-coupled directly: algebraic loop through discontinuities, even the operating point is ambiguous
+* stock: FAIL: 'Transient op failed, timestep too small' (algebraic loop through two discontinuous B-sources)
+* probe: v(q) v(qb)
+Vs s 0 PULSE(0 1 1u 1n 1n 1u 4u)
+Vr r 0 PULSE(0 1 3u 1n 1n 1u 4u)
+Bq q 0 V = (v(r)+v(qb)) > 0.5 ? 0 : 1
+Bqb qb 0 V = (v(s)+v(q)) > 0.5 ? 0 : 1
+.tran 10n 8u
+.end

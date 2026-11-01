@@ -1,0 +1,9 @@
+* tr_rc_sine -- sine steady state through an RC low-pass (fc 159 Hz, 1 kHz drive), 20 cycles: phase and amplitude accuracy at the default tolerance
+* stock: completes at default settings
+* probe: v(out)
+V1 in 0 SIN(0 1 1k)
+R1 in out 1k
+C1 out 0 1u
+.meas tran vmax MAX v(out) FROM=15m TO=20m
+.tran 2u 20m
+.end

@@ -1,0 +1,13 @@
+* tra_lcp: pulse source (12 V, duty 0.45, 500 kHz) -> L-C filter -> lossless line (Z0 5, TD 0.3 us) -> R || C load: the
+* linear part of tra_buckp without the switch
+.param fs=500k tclk={1/fs} duty=0.45
+.param lval=4.7u rdcr=20m cval=4.7u esrval=20m rload=3.3 cl=100n
+.param td=0.3u z0=5
+Vsw sw 0 PULSE(0 12 0 5n 5n {duty*tclk-5n} {tclk}) AC 1
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+T1 vout 0 vl 0 Z0={z0} TD={td}
+Rload vl 0 {rload}
+Cl vl 0 {cl}

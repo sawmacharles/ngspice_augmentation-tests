@@ -1,0 +1,14 @@
+* 34_pac_perturbed_overlap_deck.cir -- handbook example 34 (card #543): the LTI fixture of example 11 (Rin/Cout/Rload with a
+* time-invariant small-signal path) beside a clock whose PULSE overlaps its own period.
+* PULSE(0 1 0 tr=1n tf=5u pw=5.001u per=10u): tr+pw+tf = 10.002u > per = 10u, so the next rising edge starts 2 ns before the falling edge ends.
+* The clock only gives .pss a period to shoot on; the measured path Vin -> out never sees it (same construction as example 11).
+Vclk clk 0 PULSE(0 1 0 1n 5u 5.001u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+Vin in 0 DC 1 AC 1
+Rin in out 1k
+Cout out 0 10n
+Rload out 0 10k
+
+.end

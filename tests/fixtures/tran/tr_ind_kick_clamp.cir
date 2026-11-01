@@ -1,0 +1,14 @@
+* tr_ind_kick_clamp -- inductive kick: 10 mH relay-like load carrying 1 A is interrupted by a MOS-sized switch; diode + 20 V zener clamp across the load
+* stock: completes at default settings
+* probe: v(sw) l1#branch
+.model dcl D(IS=1e-12 N=1.1 RS=0.1 BV=20 IBV=10m CJO=20p TT=20n)
+.model swk SW(RON=50m ROFF=100Meg VT=2.5 VH=0.1)
+V1 vcc 0 DC 12
+Vg g 0 PULSE(5 0 20u 100n 100n 60u 200u)
+L1 vcc a 10m IC=0.24
+Rl a sw 50m
+Dc a vcc dcl
+S1 sw 0 g 0 swk
+Csw sw 0 100p
+.tran 50n 150u uic
+.end

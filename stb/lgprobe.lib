@@ -1,0 +1,18 @@
+* lgprobe.lib — loop-gain probe for Tian's two-injection stb (ngspice_augmentation, card #451, 2026-09-27)
+*
+* Insert in series with a wire that breaks every loop:  Xname a b lgprobe
+*   a = downstream (the side the loop signal travels to), b = upstream (the side it comes from).
+*   Tian T does not depend on the orientation; Middlebrook (comparison output) needs it this way round
+*   (checked 2026-09-27: R1a reversed gave Middlebrook != Tian with no reverse transmission).
+* At DC the probe is a 0 V short, so the operating point is the closed-loop one.
+* Run 1: Vi AC 1, Ii AC 0 (series voltage injection).  Run 2: Vi AC 0, Ii AC 1 (shunt current injection into x).
+* tools/stb.py drives the two runs with alter and applies Tian eq. 30:
+*   S = 2*(I1*V2 - V1*I2) + V1 + I2,  T = S/(1-S),  Spectre loopGain = -T
+*   with V = v(<inst>.x), I = i(v.<inst>.vi) (SPICE sign: current into Vi's + terminal x).
+* Source: Tian, Visvanathan, Hantgan, Kundert, IEEE Circuits & Devices 17(1), 2001; probe after Turnbull's
+* Tian_subckt.lib (ngspice feature request #34). See research/cadence-stb-pstb.md §2.4.
+.subckt lgprobe a b
+Ii 0 x DC 0 AC 0
+Vi x a DC 0 AC 1
+Vb b x DC 0
+.ends lgprobe

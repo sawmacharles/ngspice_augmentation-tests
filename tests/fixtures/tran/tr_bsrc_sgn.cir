@@ -1,0 +1,10 @@
+* tr_bsrc_sgn -- B-source sgn(): ideal hard limiter (discontinuous at each zero crossing of a 1 kHz sine), RC loaded
+* stock: completes at default settings
+* probe: v(f) v(s)
+V1 in 0 SIN(0 1 1k)
+Bs s 0 V = sgn(v(in))
+R1 s f 1k
+C1 f 0 100n
+.meas tran vf FIND v(f) AT=2.6m
+.tran 1u 3m
+.end

@@ -1,0 +1,6 @@
+* xspice_an_pwl: XSPICE code model 'pwl' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+A1 in o1 m
+.model m pwl(x_array=[-1 0 1 2] y_array=[-2 0 1.5 4] input_domain=0.1 fraction=FALSE)
+Rl o1 out 1k
+Co out 0 100p

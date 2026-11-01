@@ -1,0 +1,55 @@
+* R4 peak-current-mode buck with a soft-start reference ramp (card #719)
+* Power stage, current sense, smooth SR latch (Cq/Bq), type-II compensator and
+* clock of refs/r4_pcm_buck.cir, unchanged; only Vrefsrc ramps 0 -> vref over
+* tss = 3 ms (1500 periods at 500 kHz), then 500 periods of settle (ttot = 4 ms),
+* and the start is from rest (.ic v(q)=0, every other state 0).
+* Second closed-loop deck for .tranenv (docs/envelope.md, card #719).
+.param tss=3m ttot=4m
+.param vin_v=11 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=50.51k c1=25.21p c2=6.534n
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=100
+.param rsense=0.05 rigain=8
+.param vslope_amp=0
+.param cq=1p gset=1e-4 greset=1
+.param setpw={0.01*tclk}
+Vin vin 0 DC {vin_v}
+.ic v(q)=0
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+Rsense sw swcs {rsense}
+L1 swcs swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+.include ../../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+Vrefsrc vrefnode 0 PWL(0 0 {tss} {vref} {ttot} {vref})
+Goa 0 vc vrefnode compin {gm_oa}
+Roa vc 0 {ro_oa}
+Coa vc 0 {co_oa}
+R1in fbnode compin {r1}
+C1f compin vc {c1}
+R2f compin n2 {r2}
+C2f n2 vc {c2}
+Vslope slope 0 PULSE(0 {vslope_amp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcs vcs 0 V = {rigain}*V(sw,swcs)
+Bcmp reset_sig 0 V = 0.5*(1+tanh({kc}*(V(vcs)+V(slope)-V(vc))))
+Vsetp setp 0 PULSE(0 1 0 1n 1n {setpw} {tclk})
+Cq q 0 {cq}
+Bq q 0 I = {greset}*V(reset_sig)*V(q) - {gset}*V(setp)*(1-V(q))
+.tran 10n {ttot} 0 uic
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+run
+wrdata env_r4_pcm_softstart_reference.txt v(vout) i(L1)
+.endc
+.end

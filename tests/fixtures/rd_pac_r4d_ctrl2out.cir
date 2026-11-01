@@ -1,0 +1,182 @@
+* rd_pac_r3d_*.cir / rd_pstb_r3d.cir -- card #479 part 2, R4d peak-current-mode buck
+* WITH dead-time, .pac solver=td / .pstb small-signal fixtures. Body copied from
+* refs/r4d_pcm_buck_deadtime.cir (never edited), XP/lgprobe replaced with a plain
+* Vprobe fbtop vout DC 0 (lgprobe's own Vi is unconditionally AC 1 -- would add a
+* second, unintended injection for .pac; and native .pstb probe= does not support
+* lgprobe's 3-device topology at all), same substitution tests/fixtures/pac_r4_*.cir
+* /test_pac.py's own _r3_r4_plainprobe_deck() already use for R3. See docs/pss-pac.md
+* 'Trap: lgprobe's own hidden AC 1' for the full writeup.
+
+* R4d peak-current-mode buck, WITH dead-time (ngspice_augmentation, card #479, 2026-09-29)
+* run: ngspice -b r4d_pcm_buck_deadtime.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r4d_pcm_buck_deadtime/)
+*
+* Same power stage, current-sense/slope-compensation architecture and
+* type-II voltage loop as r4_pcm_buck.cir (12V-class rail down to 3.3V,
+* fs=500kHz clock, L=10uH C=100uF Esr=10mOhm Rload=3.3, Rsense=0.05 x
+* rigain=8, R1/R2/C1/C2 unchanged, `vslope_amp`/`vin_v` unchanged so the
+* D~0.30/0.45/0.55 duty sweep and the slope-compensation stability story
+* in refs/README.md still apply the same way), same `XP fbtop vout
+* lgprobe` probe placement. Adds exactly what r3d_vm_buck_deadtime.cir
+* adds to R3 -- see that file's header for the full design writeup of the
+* dead-time network, which is reused here unchanged (same rdt/rdisch/cdt/
+* kswd/ddt values, found by trial on R3d, card #479): a smooth RC-charge /
+* diode-fast-discharge steering network per side (break-before-make, not a
+* symmetric delay -- a symmetric delay on both the source signal and its
+* complement does NOT create a dead zone, only shifts both edges together;
+* verified by hand analysis and by a first R3d trial that showed a -210A
+* spike from exactly that mistake), a low-side body/freewheel diode, and
+* realistic Ron (gon=70 -> 14.3 mOhm, same as R3d).
+*
+* WHAT DIFFERS FROM R3d's NETWORK (R4-specific): the dead-time network
+* taps R4's smooth RS-latch output `q` (not R3's PWM comparator output)
+* and its complement, through a BUFFERED copy `qbuf`/`qbuf_inv` (see the
+* comment at Bqbuf's definition below for why a buffer is required here
+* and was not needed in R3d). q does NOT swing a clean 0..1 (R4's own
+* header documents a ~0.12/0.89 floor/ceiling, not exploited or changed
+* here); 0.5 still sits well inside that range so the RC network's
+* threshold crossing is unaffected. `kc` (the current-sense comparator
+* gain) is left at R4's own 100, unlike R3d (which raised its PWM
+* comparator's kc from 30 to 100) -- q's own edges here turned out to
+* already be fast enough relative to this network's RC_on=43ns once the
+* loading bug (below) was fixed; a first trial at kc=260 (guessing the
+* same kind of fix R3d needed) instead made the converter unstable
+* (Vout oscillating around 4-5V, i(L1) negative) before the loading bug
+* was found and fixed, so it is not used here -- see MEASURED below for
+* what this deck (kc=100) actually settles to.
+*
+* GATE-DRIVE LOSS: NOT modelled (stated per the task), same as R3d/R3/R4.
+*
+* MEASURED (ngspice-45.2 AND the fork ngspice-aug (aaba50ba3f49-s14),
+* this deck, 2026-09-29; both agree to ~4e-5V; see refs/README.md for the
+* summary table and tests/test_refs_d.py for the automated checks, all
+* pass): fsw 500.00 kHz (both); duty 0.3048 (ngspice-45.2, final) /
+* 0.3049 (fork) vs ideal Vout/Vin=0.30 (matches R4's own 0.3055 closely).
+* Vout settles to 3.300026 V (ngspice-45.2) / 3.300017 V (fork) by t=6ms
+* -- both within 0.001% of 3.3V. Ripple 4.690 mV. il 0.766-1.236A
+* (matches R4's own 0.768-1.233A closely -- dead-time/Ron/body-diode do
+* not meaningfully change the inductor current profile). No-shoot-through
+* check: peak simultaneous conduction current 1.16e-05 A vs a 1%-of-load
+* bound of 1.00e-02 A -- passes with ~850x margin. tools/loss.py (last 5
+* periods of the 6ms settled run): P_in=3.3956W P_out=3.3001W,
+* efficiency=97.18% (vs R4's 28.96% and the task's 85% bound), energy-
+* balance residual=-0.0034% of P_in (bound 0.5%). Loss split: switch_
+* conduction 20.2mW, switch_transition 1.7mW, inductor_dcr 10.2mW,
+* capacitor_esr 0.18mW, resistive_other 63.5mW (Bbody plus Rsense's own
+* ~50mW at ~1A, same as R4's own resistive_other note -- see
+* ~/Work/data/ngspice_augmentation/loss/test_refs_d/r4d/summary.json).
+* tools/stb.py: attempted (XP probe, "dec 50 1 1e9"), same "no 0 dB
+* crossing" non-result as R3d, for the same reason (a DC operating point
+* is not this converter's periodic operating point) -- see r3d's header
+* for the full note; this is not new to R4d and R4's own README already
+* flags stb.py as never having been run on R4 either. FRA crossover/PM is
+* therefore still only the AVERAGED-MODEL ESTIMATE, unchanged from R4's
+* own (same Rload/Cout/R1/R2/C1/C2): fc=20kHz, PM~=88.1deg. As with R3d,
+* dead-time's expected effect at this crossover is second-order (a small
+* duty/gain loss from the ~15-25ns dead-time itself, and an extra phase
+* lag of 360*20e3*20e-9~=0.14deg at fc) -- not separately measured.
+.param vin_v=11 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=50.51k c1=25.21p c2=6.534n
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=70 goff=1e-6 kc=100
+.param rsense=0.05 rigain=8
+.param vslope_amp=0
+.param cq=1p gset=1e-4 greset=1
+.param setpw={0.01*tclk}
+.param rdt=430 rdisch=60 cdt=100p kswd=150
+* kswd=150, not a smaller "matched to the 10-20ns transition-time hand
+* estimate" value: same finding as r3d_vm_buck_deadtime.cir (card #479) --
+* gon=70 is large enough that a shallow tanh tail still gives amp-scale
+* overlap current between hs/ls during the dead-time gap. See that file's
+* header for the full derivation/trade-off note.
+
+Vin vin 0 DC {vin_v}
+.ic v(vc)=0.6 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0 v(q)=0
+.ic v(dly_hs)=0 v(dly_ls)=0
+
+* smooth high-side/low-side switches driven by the dead-time-delayed gate
+* nodes dly_hs/dly_ls (NOT directly by q/1-q, which is R4's design and is
+* exactly the missing-dead-time gap this deck fixes)
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_hs)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_ls)-0.5))))
+
+* body/freewheel diode for the low side during the dead zone. Built as a
+* smooth B-source, not a native ngspice `D` device -- tools/loss.py (used
+* for the 85%-efficiency/0.5%-energy-balance pass/fail check) has no
+* handling for device kind `D` at all and silently excludes its power
+* from the sum, which pushed the energy-balance residual over 0.5% in a
+* first trial on r3d_vm_buck_deadtime.cir (see that file's header for the
+* full finding, card #479); this deck reuses the same fix and the same
+* vfbody/gbody/kbody values.
+.param vfbody=0.6 gbody=50 kbody=50
+Bbody 0 sw I = {gbody}*(-V(sw)-{vfbody})*0.5*(1+tanh({kbody}*(-V(sw)-{vfbody})))
+
+Csw sw 0 100p
+
+Rsense sw swcs {rsense}
+L1 swcs swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vprobe fbtop vout DC 0
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 vc vrefnode compin {gm_oa}
+Roa vc 0 {ro_oa}
+Coa vc 0 {co_oa}
+R1in fbnode compin {r1}
+C1f compin vc {c1}
+R2f compin n2 {r2}
+C2f n2 vc {c2}
+
+Vslope slope 0 PULSE(0 {vslope_amp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcs vcs 0 V = {rigain}*V(sw,swcs)
+Vctrl ctrlnode vc DC 0 AC 1
+Bcmp reset_sig 0 V = 0.5*(1+tanh({kc}*(V(vcs)+V(slope)-V(ctrlnode))))
+Vsetp setp 0 PULSE(0 1 0 1n 1n {setpw} {tclk})
+Cq q 0 {cq}
+Bq q 0 I = {greset}*V(reset_sig)*V(q) - {gset}*V(setp)*(1-V(q))
+
+* dead-time steering network (identical topology/values to r3d). NOTE: q
+* itself is a genuine dynamic state (a real capacitor Cq=1p driven only by
+* the small controlled current Bq, high impedance), NOT a zero-impedance
+* voltage-defined node like R3's `pwm` (a B-source V=expr, which behaves
+* as an ideal voltage source regardless of load current). Tapping the
+* Rchg/Rdis dead-time network directly onto q loaded it enough to swamp
+* Bq's own tiny current budget -- found empirically (card #479): q crept
+* up over tens of microseconds instead of oscillating at 500kHz, and the
+* whole converter never started switching. Fixed by first buffering q
+* through its own B-source (V=expr, zero output impedance, exactly like
+* Bcmp/pwm in R3d) into `qbuf`/`qbuf_inv`, and building the dead-time
+* network off THOSE nodes instead -- q's own latch dynamics are then
+* completely unaffected by the dead-time network's loading, same as R3d.
+Bqbuf qbuf 0 V = V(q)
+Bqinv qbuf_inv 0 V = 1-V(q)
+.model ddt D(IS=1e-6 N=1.0)
+
+Rchg_hs qbuf dly_hs {rdt}
+Ddis_hs dly_hs dis_hs ddt
+Rdis_hs dis_hs qbuf {rdisch}
+Cdly_hs dly_hs 0 {cdt} IC=0
+
+Rchg_ls qbuf_inv dly_ls {rdt}
+Ddis_ls dly_ls dis_ls ddt
+Rdis_ls dis_ls qbuf_inv {rdisch}
+Cdly_ls dly_ls 0 {cdt} IC=0
+
+
+.pac 500e3 1500e-6 vout 200 10 150 1e-6 dec 5 500 200000 method="shoot" solver="td"
+.control
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pac_out.txt v(vout)
+quit
+.endc
+.end

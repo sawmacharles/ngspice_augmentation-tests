@@ -1,0 +1,41 @@
+* xspice_r3_sxfer -- card #557 fixture: the R3 voltage-mode buck (tests/fixtures/pac_r3_ctrl2out.cir) with its type-III op-amp compensator
+* (Goa/Roa/Coa + R1in R3in C3in C1f R2f C2f) replaced by an XSPICE s_xfer, C(s) = K (1+s/wz)^2 / (s (1+s/wp)), K=1e5, wz=2pi 5 kHz, wp=2pi 200 kHz
+* (loop crossover ~30 kHz, regulates 3.3 V; a stateful analog code model in a switching loop).  Vctrl (AC 1) is the series injection between the
+* compensator output and the comparator, as in the R3 fixtures: control-to-output.  tests/test_xspice.py appends `.options` and `.pac`.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=30
+
+Vin vin 0 DC {vin_v}
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vprobe fbtop vout DC 0
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode opout DC 0 AC 1
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(ctrlnode)-V(ramp))))
+
+
+A0 [vrefnode fbnode] e1 sm
+.model sm summer(in_gain=[1 -1])
+A1 e1 opout mc
+.model mc s_xfer(gain=100000.0 num_coeff=[1.013211836e-09 6.366197724e-05 1] den_coeff=[7.957747155e-07 1 0] int_ic=[0 0])
+Rop opout 0 1meg

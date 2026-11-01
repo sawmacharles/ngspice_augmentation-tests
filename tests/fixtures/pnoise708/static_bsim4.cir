@@ -1,0 +1,15 @@
+* pnoise708/static_bsim4.cir -- card #708 static check: the cs_bsim4.cir stage with its gate held at DC (vg = 1.0 V through Rg, saturated,
+* id ~ 40 uA) and flicker ON (fnoimod=1, noia/noib/noic), so the circuit is LTI; the PSS period comes from a 1 kHz clock on an unrelated
+* net (clkgnd: a noiseless RC).  `.pnoise solver=td dev=1` (total and every BSIM4 / resistor generator) must equal plain `.noise`.
+.param ntn=1 tnm=0
+Vdd vdd 0 1.8
+Rd vdd d 20k
+Cl d 0 100p
+Rg gs g 10k
+Vg gs 0 DC 1.0
+.model nch nmos level=54 version=4.8.2 mobmod=0 capmod=2 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0 toxe=3e-9 toxp=3e-9 toxm=3e-9 vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6 u0=300 vsat=1.1e5 cgso=2e-10 cgdo=2e-10 cgbo=1e-11 cgsl=1e-10 cgdl=1e-10 cf=1e-10 xpart=0 fnoimod=1 noia=6.25e41 noib=3.125e26 noic=8.75e9 tnoimod={tnm} ntnoi={ntn}
+M1 d g 0 0 nch w=1u l=0.5u
+Vclk clkgnd 0 PULSE(0 1 0 10u 10u 490u 1m)
+Rclk clkgnd cn 1k noisy=0
+Cclk cn 0 100n
+.end

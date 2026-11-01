@@ -1,0 +1,20 @@
+* 19_mc_once_with.cir -- same circuit as 19_mc_once_without.cir, but the
+* shared .param declaration is wrapped in once() (patch 0016, in this
+* build's own patches/series -- fork only, not in stock ngspice-45.2).
+* once() skips numparam's textual .func-rewrite for this .param line, so
+* every reference (including through the b/c copies) resolves through
+* the ordinary, never-redrawn cached symbol-table entry -- R1 and R2
+* read back IDENTICAL values.
+.option seed=1
+.param a = once(agauss(0,10m,3))
+.param b = {a}
+.param c = {a}
+R1 1 0 '1000*(1+b)'
+R2 2 0 '1000*(1+c)'
+V1 1 0 DC 1
+V2 2 0 DC 1
+.control
+op
+print @r1[resistance] @r2[resistance]
+.endc
+.end

@@ -1,0 +1,15 @@
+* tr_boost_mos -- boost converter with a grounded NMOS (level 1) switch driven by a 0-10 V gate pulse; drain ringing with the diode capacitance
+* stock: completes at default settings
+* probe: v(out) l1#branch
+.model dsch D(IS=1e-8 N=1.05 RS=0.05 CJO=50p TT=5n BV=40 IBV=1m)
+.model nm1 NMOS(LEVEL=1 VTO=0.7 KP=120u LAMBDA=0.03 CGSO=0.3n CGDO=0.3n CBD=10f CBS=10f PB=0.8)
+Vin in 0 DC 5
+Vg g 0 PULSE(0 10 0 10n 10n 4u 10u)
+L1 in sw 22u IC=0
+M1 sw g 0 0 nm1 W=20000u L=1u
+D1 sw out dsch
+C1 out 0 47u IC=0
+RL out 0 25
+.meas tran vavg AVG v(out) FROM=0.9m TO=1m
+.tran 50n 1m uic
+.end

@@ -1,0 +1,31 @@
+* 08_pstb.cir -- .pstb, sideband-0 periodic loop gain via Tian's
+* two-injection method on an LPTV orbit (docs/pss-pac.md). Linear
+* single-pole feedback loop (same topology as refs/r1a_unilateral.cir),
+* riding on an unrelated clocked network so PSS has a period to shoot on;
+* Vprobe is a plain top-level 0V V-source in the loop-break wire, exactly
+* like native .stb's own probe= convention.
+.param gm=10m ro=100k co=10p r1=100k r2=100k cn=2p
+
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+Vp vp 0 DC 0.1 AC 0
+G1 0 o vp vn {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+R1 o fb {r1}
+R2 fb 0 {r2}
+Vprobe fb vn DC 0
+Cn vn 0 {cn}
+
+.pstb 100k 0 clkgnd 2000 1 5 0.001 dec 10 1k 20meg probe="Vprobe" method="shoot"
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pstb_out.txt loopgain t
+.endc
+.end

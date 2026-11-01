@@ -1,0 +1,8 @@
+* xspice_an_d_dt: XSPICE code model 'd_dt' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+Rs in in2 1k
+Cs in2 0 100p
+A1 in2 o1 m
+.model m d_dt(gain=1e-6 out_offset=0 limit_range=1e-3 out_lower_limit=-1e9 out_upper_limit=1e9)
+Rl o1 out 1k
+Co out 0 100p

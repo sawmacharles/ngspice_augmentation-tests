@@ -1,0 +1,20 @@
+* digclock: open-loop 12V->3.3V buck whose ONLY clock is an XSPICE d_pwm (500 kHz, duty 0.275 from a DC control voltage); smooth tanh switches (card #712)
+.param vin_v=12 fs=500k
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30
+Vin vin 0 DC {vin_v}
+Vc c 0 DC 0.5
+Aosc c dpw mosc
+.model mosc d_osc(cntl_array=[0 1] freq_array=[{fs} {fs}] duty_cycle=0.275 init_phase=0 rise_delay=1n fall_delay=1n)
+Adrv [dpw] [pwm] dacd
+.model dacd dac_bridge(out_low=0 out_high=1 t_rise=5n t_fall=5n)
+Rpw pwm 0 1Meg
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0 I = V(sw) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+.ic v(vout)=0 v(cx)=0

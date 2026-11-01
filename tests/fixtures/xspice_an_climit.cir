@@ -1,0 +1,8 @@
+* xspice_an_climit: XSPICE code model 'climit' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+Vcu cu 0 1.2
+Vcl cl 0 -0.4
+A1 in cu cl o1 m
+.model m climit(in_offset=0 gain=2 upper_delta=0.1 lower_delta=0.1 limit_range=0.1 fraction=FALSE)
+Rl o1 out 1k
+Co out 0 100p

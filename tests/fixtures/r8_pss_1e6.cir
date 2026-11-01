@@ -1,0 +1,134 @@
+* r8_pss_1e6 -- card #549 fixture (tests/test_r7.py check_r8_orbit): R8 .pss trigger=cx at reltol 1e-6 (period 2.53110 us, matches the reltol-1e-6 .tran 2.53110; the header numbers below are the old reltol-1e-3 ones).
+* R8 transistor-level free-running hysteretic synchronous buck (ngspice_augmentation, card #544, 2026-10-02)
+* run: ngspice -b r8_bsim_hysteretic_buck.cir  (cwd = refs/; writes under ~/Work/data/ngspice_augmentation/544/r8/)
+*
+* R7's BSIM4 power stage, gate drivers, dead-time generator and NMOS-pair comparator (model cards copied from the repo, see refs/r7_bsim_buck.cir) with
+* the ramp, the error amplifier and the loop probe removed. 5 V -> ~1.7 V (divider ra 1.5k / rb 1k, vref 0.6), L 2.2 uH, Cout 100 uF, ESR 80 mOhm, 0.75 Ohm.
+* Control: the comparator sees fb = vout*rb/(ra+rb) against vth, which is vref pulled toward q through Rh1 (100k) / Rh2 (1k): positive feedback, a
+* 50 mV window at the comparator (~125 mV at vout). pwm0 (comparator output) drives q through Rq 1k into the NATIVE capacitor Cq 2p: q holds the
+* hysteresis memory as a native state (a free-running orbit restarted from native states alone must not lose its latch state) and feeds the dead-time
+* generator. The orbit has one rising crossing of cx (Cout's positive node, +-1.9 mV ripple around 1.7055 V) per period: trigger=cx trigval=1.7055 is
+* the Poincare section (q rising through a level is NOT: the comparator output is a hidden state that a native-state restart resets, and the crossing
+* then re-occurs spuriously 20 ns after the restart).
+* MEASURED (build aaba50ba3f49-544-12, reltol 1e-4): settled .tran period 2.5266 us (395.8 kHz), vout mean 1.7055 V, ripple ~95 mV; .pss trigger=cx: 10 Newton
+* iterations, period 2.52840 us (fsw 395.507 kHz; the restart map's orbit is 0.07 % longer than the settled .tran), ~90 s.
+* Fixtures: tests/fixtures/r8_pss.cir, r8_pac_ctrl2out.cir, r8_pac_line2out.cir (made by ~/Work/data/ngspice_augmentation/544/mkr8.py).
+* Traps: see refs/r7_bsim_buck.cir (PULSE overlap, BSIM4 W for Ron); .pss at reltol 1e-4.
+.param vin_v=5
+.param lval=2.2u rdcr=10m cval=100u esrval=80m rload=0.75
+.param ra=1.5k rb=1k vref=0.6
+.param ibias=20u rq=1k cq=2p rh1=100k rh2=1k
+.param iload=2 vout_ic=1.5
+
+.model nch4 nmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=300 vsat=1.1e5
++ cgso=2e-10 cgdo=2e-10 cgbo=0 cgsl=0 cgdl=0
++ cf=0 cjs=1e-4 cjd=1e-4 cjswd=1e-10 cjswgd=1e-10
+.model pch4 pmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=-0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=100 vsat=1.0e5
++ cgso=2e-10 cgdo=2e-10 cgbo=0 cgsl=0 cgdl=0
++ cf=0 cjs=1e-4 cjd=1e-4 cjswd=1e-10 cjswgd=1e-10
+.model nchp nmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=1.0 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=300 vsat=1.1e5
+.model pchp pmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=-1.0 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=100 vsat=0.8e5
+
+* ---- gates (w in metres via u suffix; junction geometry follows w) ----
+.subckt inv in out vdd wn=2u wp=5u
+Mn out in 0 0 nch4 w={wn} l=0.5u as={wn*1u} ad={wn*1u} ps={2*wn+2u} pd={2*wn+2u}
+Mp out in vdd vdd pch4 w={wp} l=0.5u as={wp*1u} ad={wp*1u} ps={2*wp+2u} pd={2*wp+2u}
+.ends inv
+.subckt nor2 a b y vdd
+Mp1 n1 a vdd vdd pch4 w=10u l=0.5u as=10p ad=10p ps=22u pd=22u
+Mp2 y b n1 vdd pch4 w=10u l=0.5u as=10p ad=10p ps=22u pd=22u
+Mn1 y a 0 0 nch4 w=2u l=0.5u as=2p ad=2p ps=6u pd=6u
+Mn2 y b 0 0 nch4 w=2u l=0.5u as=2p ad=2p ps=6u pd=6u
+.ends nor2
+* delay: six minimum inverters, 100 fF per stage (sets the dead time)
+.subckt dly6 in out vdd
+X1 in d1 vdd inv
+C1 d1 0 {cdl}
+X2 d1 d2 vdd inv
+C2 d2 0 {cdl}
+X3 d2 d3 vdd inv
+C3 d3 0 {cdl}
+X4 d3 d4 vdd inv
+C4 d4 0 {cdl}
+X5 d4 d5 vdd inv
+C5 d5 0 {cdl}
+X6 d5 out vdd inv
+.ends dly6
+.param cdl=3p
+
+Vin vin 0 DC {vin_v}
+.ic v(vout)={vout_ic} v(q)=0
+
+* ---- power stage ----
+Mhs sw ghs vin vin pchp w=60000u l=0.35u as=1.2e-7 ad=1.2e-7 ps=0.12 pd=0.12
+Mls sw gls 0 0 nchp w=40000u l=0.35u as=8e-8 ad=8e-8 ps=0.08 pd=0.08
+L1 sw swl {lval} IC={iload}
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC={vout_ic}
+Rload vout 0 {rload}
+
+* ---- hysteretic control: divider, window reference, comparator, RC state node q (native Cq = the free-running orbit's phase state) ----
+Ra vout fbnode {ra}
+Rb fbnode 0 {rb}
+Vrefsrc vrefnode 0 DC {vref}
+* positive feedback: vth = (q*rh2 + vref*rh1)/(rh1+rh2) -> window rh2/(rh1+rh2)*5 V wide at the comparator input
+Rh1 vth q {rh1}
+Rh2 vth vrefnode {rh2}
+* ---- comparator (NMOS pair, PMOS mirror): pwm0 high when vth > fb, i.e. HS on while Vout is below the (hysteretic) threshold ----
+Ibc vin bcb DC 40u
+Mbr bcb bcb 0 0 nch4 w=10u l=1u as=10p ad=10p ps=22u pd=22u
+Mct ctail bcb 0 0 nch4 w=20u l=1u as=20p ad=20p ps=42u pd=42u
+Mc1 cd1 vth ctail 0 nch4 w=20u l=0.5u as=20p ad=20p ps=42u pd=42u
+Mc2 cout fbnode ctail 0 nch4 w=20u l=0.5u as=20p ad=20p ps=42u pd=42u
+Mc3 cd1 cd1 vin vin pch4 w=20u l=1u as=20p ad=20p ps=42u pd=42u
+Mc4 cout cd1 vin vin pch4 w=20u l=1u as=20p ad=20p ps=42u pd=42u
+Xcp1 cout cpb vin inv
+Xcp2 cpb pwm0 vin inv
+Rq pwm0 q {rq}
+Cq q 0 {cq}
+Xpb q pwm_b vin inv
+
+* ---- dead-time generator (cross-coupled NORs with delayed feedback) ----
+Xnh pwm_b ls_d hs_on vin nor2
+Xnl q hs_d ls_on vin nor2
+Xdh hs_on hs_d vin dly6
+Xdl ls_on ls_d vin dly6
+
+* ---- gate drivers: tapered chains ----
+Xh1 hs_on h1 vin inv wn=2u wp=5u
+Xh2 h1 h2 vin inv wn=11u wp=27u
+Xh3 h2 h3 vin inv wn=60u wp=150u
+Xh4 h3 h4 vin inv wn=330u wp=830u
+Xh5 h4 ghs vin inv wn=1815u wp=4540u
+Xl1 ls_on l1 vin inv wn=2u wp=5u
+Xl2 l1 l2 vin inv wn=16u wp=40u
+Xl3 l2 l3 vin inv wn=130u wp=320u
+Xl4 l3 gls vin inv wn=1000u wp=2500u
+
+.options reltol=1e-6
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+pss 395e3 100u q 400 10 150 1e-6 uic method=shoot trigger=cx trigval=1.7055 trigdir=rise
+wrdata ~/Work/data/ngspice_augmentation/549/test/r8_pss_1e6.txt v(vout) v(q) i(L1) v(cx)
+.endc
+.end

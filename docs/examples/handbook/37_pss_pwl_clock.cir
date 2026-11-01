@@ -1,0 +1,19 @@
+* 37_pss_pwl_clock.cir -- handbook example 37 (card #543): a PWL clock written with a key AFTER the function, `PWL(...) r=0`.
+* Until patch 0096 (card #541) .pss method=shoot refused this deck ("no V/I source with a time function was found"): the key after the
+* function cleared the source's time-function flag. A settled .tran of the same deck (60 ms = 60 periods) is the independent reference.
+V1 in 0 PWL(0 0 0.4m 1 0.5m 1 0.9m 0 1m 0) r=0
+R1 in out 1k
+C1 out 0 100n
+.pss 1k 5m out 200 10 50 1e-6 method=shoot
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pwl_pss.txt out
+tran 1u 60m uic
+meas tran vmax max v(out) from=58m to=59m
+meas tran vmin min v(out) from=58m to=59m
+.endc
+.end

@@ -1,0 +1,55 @@
+* convmeas_rlc_step.cir -- series R-L-C driven by an ideal voltage step,
+* output taken across C, for tools/convmeas.py's overshoot/undershoot and
+* settling-time checks (card #497, feature-survey #16). A textbook, exactly
+* closed-form underdamped 2nd-order step response (H(s) = wn^2 / (s^2 +
+* 2*zeta*wn*s + wn^2)) -- chosen deliberately linear and simple (not a real
+* converter's nonlinear switching output) so the expected overshoot/
+* undershoot/settling numbers below come from a hand-derivable formula, not
+* a simulation this file would then just be circularly checking itself
+* against. tests/test_convmeas.py derives the same numbers independently in
+* Python from the same L/C/R and compares against BOTH the closed-form
+* formula's own peak times AND this deck's real ngspice-simulated trace.
+*
+* zeta = (R/2)*sqrt(C/L) = 0.3 (moderately underdamped -- clear overshoot,
+* not borderline). L=1mH, C=1uF -> wn=1/sqrt(LC)=31622.7766 rad/s
+* (fn=5032.92 Hz), R = 2*zeta*sqrt(L/C) = 18.9736659610... Ohms (computed to
+* 10 significant figures in Python, hardcoded below -- ngspice numparam's
+* own sqrt() support was not relied on, to keep this deck's literal value
+* and the test's independent Python recomputation exactly traceable to the
+* same number).
+*
+* Step: Vin PULSE(0 1 10u 1n 1n 1 1) -- 0V to 1V at t=10us, ~ideal edge
+* (1ns rise), held for the rest of the run (PW=PER=1s, far beyond tstop).
+*
+* CLOSED FORM (normalized step 0->1 at t=td): y(t) = 1 - exp(-zeta*wn*(t-td))
+* / sqrt(1-zeta^2) * sin(wd*(t-td) + arccos(zeta)), wd = wn*sqrt(1-zeta^2).
+* First peak (overshoot) at t = td + pi/wd = td + 104.143 us, magnitude
+* Mp = exp(-zeta*pi/sqrt(1-zeta^2)) = 37.2326 % above the final value.
+* Second peak (undershoot) at t = td + 2*pi/wd = td + 208.286 us, magnitude
+* Mp^2 = 13.8627 % below the final value (successive-peak decay factor for
+* this canonical system is exp(-zeta*pi/sqrt(1-zeta^2)) = Mp itself, so the
+* k-th peak's deviation fraction is Mp^k).
+*
+* Run: ngspice -b convmeas_rlc_step.cir
+* Via convmeas.py: python3 tools/convmeas.py tests/fixtures/convmeas_rlc_step.cir \
+*     --vin Vin --vout-node vout --rload-ohms 1e9 --period 198.69e-6 \
+*     --periods 1 --tstop 1.01e-3 --load-step-time 10e-6 \
+*     --pre-window 0 9e-6 --post-window 9e-4 1.01e-3
+
+.param zeta=0.3 lval=1e-3 cval=1e-6 rval=18.973665961010276
+
+Vin in 0 PULSE(0 1 10u 1n 1n 1 1)
+R1 in lx {rval}
+L1 lx vout {lval}
+C1 vout 0 {cval} IC=0
+
+.control
+tran 20n 1.01m 0 uic
+meas tran peak1 MAX v(vout) FROM=10u TO=150u
+meas tran peak1_at WHEN v(vout)=peak1 FALL=1
+meas tran peak2 MIN v(vout) FROM=150u TO=260u
+print peak1 peak2
+write ~/Work/data/ngspice_augmentation/convmeas/fixture-standalone/convmeas_rlc_step.raw
+wrdata ~/Work/data/ngspice_augmentation/convmeas/fixture-standalone/convmeas_rlc_step.txt v(vout) v(in)
+.endc
+.end

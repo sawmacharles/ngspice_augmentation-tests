@@ -1,0 +1,99 @@
+* pss_r6s_shoot.cir -- "R6s": R6's power stage (ideal native `sw` S devices,
+* refs/r6_vm_buck_ideal.cir), PWM comparator built DIRECTLY from the S
+* device's own two-terminal differential control input (ctrl+ = opout,
+* ctrl- = ramp, vt=0) instead of R6's XSPICE d_pwm/dac_bridge chain, and
+* instead of an intermediate B-source tanh comparator. Card #494 (plan
+* T6.1, saltation).
+*
+* WHY (two separate blockers found this card, see the card #494 report):
+*  (1) `.pss method=shoot` on the real refs/r6_vm_buck_ideal.cir SEGFAULTS
+*      in the shooting engine's pre-stabilization transient, root-caused
+*      (gdb) to the XSPICE d_pwm code model's cm_d_pwm() dereferencing a
+*      stale/NULL cm_event_get_ptr() pointer at TIME==0.0 -- its private
+*      MIF event-queue state does not survive the shooting engine's
+*      period-restart re-entry. Out of scope to fix this pass (see the
+*      report's "what remains"); this fixture avoids XSPICE entirely.
+*  (2) An EARLIER version of this fixture built the PWM comparator the
+*      same way refs/r3_vm_buck.cir does (a Bcmp behavioural V-source,
+*      pwm=0.5*(1+tanh(kc*(vc-ramp)))), feeding the ideal `sw` switches'
+*      control terminals. That failed differently: the shooting engine's
+*      period-integration pass (reltol forced to 1e-5, tighter than the
+*      1e-3 default -- Enhancement-176's own driven-mode tightening)
+*      could not converge ("Timestep too small ... trouble with node
+*      pwm"/"pwmp"), even after softening kc and adding a small RC
+*      gate-drive filter. Root cause (not fully chased further, time
+*      budget): a B-source has zero output impedance and no LTE-visible
+*      state of its own, so a near-ideal tanh sitting IN SERIES with the
+*      switch's own hard threshold compounds two discontinuity-like
+*      decisions into one Newton solve; ngspice's LTE/NR step control has
+*      no event location to fall back on (that is exactly what this
+*      card's own saltation/event-detection work is FOR).
+*      FIX for this fixture: skip the B-source entirely -- `sw`'s own
+*      device syntax already takes a DIFFERENTIAL control pair
+*      (ctrl+, ctrl-), so comparing the compensator output directly
+*      against the ramp is `S ... opout ramp SWMOD` (vt=0), no
+*      intermediate nonlinearity at all. This converges cleanly (see the
+*      card #494 report) and is a completely standard way to build an
+*      ideal-switch PWM stage -- not a simplification of the physics
+*      being tested (the switch's OWN threshold crossing, driven by a
+*      state -- opout -- that depends on the whole feedback loop, is
+*      exactly card #494's saltation event; only the "how is duty decided"
+*      plumbing changed, not what is or isn't a smooth/ideal switch).
+* Everything else (L/C/Esr/Rload, compensator R1..C3, op-amp, divider,
+* snubber, Ron/Roff, Vramp) is unchanged from r6_vm_buck_ideal.cir /
+* r3_vm_buck.cir.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+.ic v(opout)=0.55 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0
+
+* direct differential-control PWM: Shs ON when opout>ramp, Sls ON when
+* opout<ramp (ctrl+/ctrl- swapped) -- vt=0 in the (opout-ramp) difference,
+* vh=0.005 small hysteresis for numerical cleanliness (same role as R6's
+* vh=0.05 on its own 0..1-scaled pwmp/pwmn signals, rescaled here since
+* opout-ramp spans the full 0..vramp=2V range rather than 0..1).
+Shs vin sw opout ramp SWMOD
+Sls sw 0   ramp opout SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+
+.control
+set filetype=ascii
+pss 500e3 300e-6 vout 200 10 150 1e-6 uic method=shoot
+write ~/Work/data/ngspice_augmentation/pss/r6s_vm_buck/r6s_shoot.raw
+wrdata ~/Work/data/ngspice_augmentation/pss/r6s_vm_buck/r6s_shoot.txt v(vout) i(Shs) v(opout) i(L1)
+.endc
+.end

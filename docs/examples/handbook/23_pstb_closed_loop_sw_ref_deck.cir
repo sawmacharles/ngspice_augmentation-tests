@@ -1,0 +1,55 @@
+* 23_pstb_closed_loop_sw_ref_deck.cir -- handbook example (card #534): a CLOSED-LOOP buck whose power stage is two native
+* IDEAL `sw` switches (type-III compensator -> comparator-by-differential-control -> switches), fs=500 kHz.
+* Fixture tests/fixtures/pss_r6s_shoot.cir (card #494/#498) with the loop-break probe written as a plain 0 V source
+* (Vprobe) instead of an lgprobe subcircuit, so the same circuit also serves 22_pss_closed_loop_sw.cir.
+* The PWM comparator is the switch's own differential control pair (ctrl+=opout, ctrl-=ramp, vt=0): no B-source
+* tanh in front of the switch. Before the exact event location of card #498 this deck's .pss plateaued at ~1.8e-3.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param ronsw=10m roffsw=1Meg
+
+Vin vin 0 DC {vin_v}
+.ic v(opout)=0.55 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0
+
+* direct differential-control PWM: Shs ON when opout>ramp, Sls ON when
+* opout<ramp (ctrl+/ctrl- swapped) -- vt=0 in the (opout-ramp) difference,
+* vh=0.005 small hysteresis for numerical cleanliness (same role as R6's
+* vh=0.05 on its own 0..1-scaled pwmp/pwmn signals, rescaled here since
+* opout-ramp spans the full 0..vramp=2V range rather than 0..1).
+Shs vin sw opout ramp SWMOD
+Sls sw 0   ramp opout SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+Csw sw 0 1n
+Rsnub sw nsnub 10
+Csnub nsnub 0 1n
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+
+* (no analysis card: tools/pac_perturbed.py --loop-gain inserts its own Tian probe between fbtop and vout and runs the
+* perturbed nonlinear transients itself; the deck must NOT already tie fbtop to vout.)
+.end

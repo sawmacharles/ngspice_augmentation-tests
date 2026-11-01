@@ -1,0 +1,16 @@
+* matched resistor pair -- global (shared @@GA@@) + local (@@LA@@/@@LB@@)
+* mismatch draw (docs/mc.md), handbook example.
+R1 1 0 '1000*(1+@@GA@@+@@LA@@)'
+R2 2 0 '1000*(1+@@GA@@+@@LB@@)'
+V1 1 0 DC 1
+V2 2 0 DC 1
+.control
+op
+let r1v = @r1[resistance]
+let r2v = @r2[resistance]
+set r1s = $&r1v
+set r2s = $&r2v
+echo MCMEAS r1=$r1s
+echo MCMEAS r2=$r2s
+.endc
+.end

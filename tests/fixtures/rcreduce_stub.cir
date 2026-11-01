@@ -1,0 +1,21 @@
+* tests/fixtures/rcreduce_stub.cir -- rcreduce.py validation fixture
+* (ngspice_augmentation card #506, round 8, candidate 1). Covers the two
+* edge cases rcreduce_chain.cir does not: a degree-1 dangling resistor
+* stub (pure-R, no cap -- dropped entirely, no new resistor needed) and
+* an opt-in --fast-node-tol candidate (a single-capacitor node whose own
+* local tau is far below any reasonable --ref-tstep). Not derived from
+* any real deck.
+V1 in 0 DC 5
+Rin in mid 100
+Rstub mid dead 50
+Rmid mid out 200
+Rout out 0 1k
+Cout out 0 1u
+Rfast mid fastnode 10
+Cfast fastnode 0 1p
+.tran 1u 50u
+.control
+run
+print v(out) v(mid)
+.endc
+.end

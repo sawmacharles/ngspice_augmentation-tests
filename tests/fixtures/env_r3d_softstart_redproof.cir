@@ -1,0 +1,195 @@
+* R3d voltage-mode synchronous buck WITH soft-start AND a mid-ramp load-step
+* RED-PROOF (ngspice_augmentation, card #512, envelope-following round 10,
+* 2026-09-29)
+* run: ngspice -b env_r3d_softstart.cir
+*   (writes to ~/Work/data/ngspice_augmentation/envelope/env_r3d_softstart/)
+*
+* Same power stage, compensator, dead-time network and PWM comparator as
+* refs/r3d_vm_buck_deadtime.cir (see that file's own header for the full
+* derivation of every component value) -- the ONLY change is Vrefsrc:
+* instead of a fixed DC reference, it ramps 0 -> {vref} linearly over
+* {tss}=3ms (1500 switching periods at fs=500kHz), so the loop's own
+* v(vout) tracks a soft-start ramp instead of stepping straight to 3.3V.
+* This is the target case for card #512's envelope-following work
+* (tools/envelope_tran.py, docs/envelope.md): a transient that spans
+* thousands of switching periods (2000 total here: 1500 during the ramp,
+* 500 more settling after it) where a full plain `.tran` is the reference
+* this document validates the envelope method against, not the thing being
+* sped up in production use here (only the fixture; envelope_tran.py's own
+* CLI runs the accelerated path separately).
+*
+* This file, run standalone as below, IS the ground-truth reference: a
+* plain `.tran {tstep} {ttot} 0 uic` across the whole ramp plus settle,
+* with the fine-resolution waveform written out for
+* tools/envelope_tran.py's validation pass to compare against.
+.param tss=3m ttot=4m
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=70 goff=1e-6 kc=100
+.param rdt=430 rdisch=60 cdt=100p kswd=150
+* kswd raised from a first trial's 15 (hand-estimated for a ~15ns
+* transition, see the derivation above) to 150: found empirically (card
+* #479) that gon=70 is large enough that even a small residual gate
+* fraction (kswd=15's tail at, e.g., dly 0.19 away from the 0.5 threshold)
+* still gives amp-scale conductance*V, so a genuine current-based overlap
+* check (independently re-deriving I_hs/I_ls from the same B-source
+* formulas ngspice itself evaluates, as tools/loss.py does) found up to
+* ~0.78A of simultaneous hs/ls current with kswd=15 -- comparable to the
+* ~1A load, failing the <1% bound outright, even though the two gate
+* nodes' own 0.5-crossings were cleanly separated by ~20ns. kswd=150
+* makes the tanh's tail fall off fast enough (conductance within ~1e-5 of
+* goff by ~0.1 away from the 0.5 crossing, well inside the dead-time gap)
+* that the residual current in the gap is negligible -- see MEASURED
+* below and tests/test_refs_d.py's dead-time/overlap check. This does
+* make the switch's own transition faster than the 10-20ns example the
+* task gave (the RC network's own slew, times the now-much-narrower
+* tanh window, works out to ~1-2ns -- still a genuine smooth/finite
+* transition, just faster than the suggestion; a slower transition and a
+* clean (<1% of load) dead-time gap turned out to be in tension for a
+* single-stage tanh fed by this RC network's slew, and correctness (no
+* shoot-through) was prioritised, per the task's own ranked pass/fail
+* list).
+* kc raised from R3's 30 to 100: found empirically (card #479) that the
+* PWM comparator's own falling edge (which happens during the sawtooth
+* ramp's SLOW rise portion, not its fast retrace) has an intrinsic width
+* of ~1/kc/(ramp slew) -- at kc=30 that is ~32ns, comparable to (not much
+* faster than) the dead-time network's own RC_on=43ns, so the dead-time
+* network was NOT the dominant delay on that edge and the two switches'
+* gate nodes crossed 0.5 at nearly the same instant (near-zero effective
+* dead time on that edge, confirmed by a first trial: i(vin) showed a
+* -210A shoot-through spike). kc=100 shrinks that intrinsic width to
+* ~10ns, well under RC_on, so the RC network is what actually sets the
+* delay on both edges. The OTHER edge (pwm's rising edge, at the ramp's
+* fast retrace) was already fast at kc=30 and stays fast here.
+
+Vin vin 0 DC {vin_v}
+*
+* RED-PROOF PURPOSE: envelope_tran.py's projective step assumes the
+* per-period state delta dx_n=x_n-x_{n-1} varies SMOOTHLY in the cycle
+* index n (Kundert's own 'similar, but not identical' assumption). This
+* variant breaks that assumption on purpose: Iload_step sinks an abrupt
+* 0->4A load step (vs. the deck's nominal ~1A) at {tstep_time}, mid-ramp,
+* over {tstep_rise}=100ns -- a single-period discontinuity in dx that a
+* smooth envelope cannot legitimately skip over. (A genuine DCM/CCM mode
+* change was considered instead, per the card's own '(e.g. a DCM/CCM
+* transition)' example, but this deck's Bls is a bidirectional smooth
+* switch with no diode-emulation/forced-CCM distinction -- see
+* refs/r3d_vm_buck_deadtime.cir's own header -- so it has no DCM mode to
+* transition into without a separate device model card #479/512 did not
+* build; a large abrupt load step is used instead as an equally valid
+* 'per-period state jump the envelope method must not paper over'
+* red-proof case, stated here as a substitution, not hidden.)
+.param tstep_time=1.5m tstep_rise=100n istep0=0 istep1=4.0
+* card #550 (2026-10-02): the two continuation lines below had no leading '+', so ngspice dropped them and this source was
+* an unterminated PWL(0 0 {tstep_time} 0 that never stepped: the "red-proof" event did not exist (the reference .tran shows
+* none either); the old test passed on the development workstation (AMD Ryzen AI Max+ 395, Linux) only because the gates fired on compensator ringing 94us earlier.
+Iload_step vout 0 PWL(0 {istep0} {tstep_time} {istep0}
++                    {tstep_time+tstep_rise} {istep1}
++                    {tstep_time+tstep_rise+1u} {istep1})
+
+* smooth high-side (vin->sw) and low-side (sw->0) switches, driven by the
+* dead-time-delayed gate nodes dly_hs/dly_ls (NOT directly by pwm/1-pwm,
+* which is what R3 does and is exactly the missing-dead-time gap this deck
+* fixes)
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_hs)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({kswd}*(V(dly_ls)-0.5))))
+
+* body/freewheel diode for the low side during the dead zone. Built as a
+* smooth B-source (soft-knee: ~zero below vfbody, ~linear with an
+* effective 1/gbody=20 mOhm "on-resistance" above it) rather than a native
+* ngspice `D` device: found empirically (card #479) that tools/loss.py
+* (used to check the 85%-efficiency/0.5%-energy-balance pass/fail bounds,
+* per the task) has no handling for device kind `D` at all -- a native
+* diode's dissipated power is silently excluded from its sum, and this
+* device carries enough current during the dead-time interval (the
+* inductor current freewheeling through it) that the resulting energy-
+* balance residual came out to 0.5249% with a native D device, just over
+* the 0.5% bound. loss.py DOES handle `B, I=expr` devices correctly (its
+* own documented "bexpr" method, re-deriving current from the parsed
+* expression -- see docs/loss.md), so rebuilding the body diode as one
+* fixes the accounting without changing its physical behaviour: still a
+* smooth, continuous function of Vd (no event, no ideal switch), just not
+* ngspice's own exponential diode primitive. vfbody=0.6V, gbody=50 (1/
+* gbody=20 mOhm, comparable to the switches' own Ron), kbody=50 (a
+* deliberately soft ~20mV knee, since this is a control-style smooth
+* model, not an attempt to match a real body diode's exponential I-V).
+.param vfbody=0.6 gbody=50 kbody=50
+Bbody 0 sw I = {gbody}*(-V(sw)-{vfbody})*0.5*(1+tanh({kbody}*(-V(sw)-{vfbody})))
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III, identical to R3), PWM comparator
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 PWL(0 0 {tss} {vref} {ttot} {vref})
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(opout)-V(ramp))))
+
+* dead-time steering network: pwm_inv is a separate B-source complement
+* (not a wire tap) so it has the same zero-output-impedance drive as pwm
+* itself and can source/sink the Rchg/Rdis branch currents cleanly
+Bpwminv pwm_inv 0 V = 1-V(pwm)
+
+* IS raised to 1e-6 (from a first trial's 1e-14, a "normal" ~0.6-0.7V-knee
+* Si diode model): found empirically (card #479) that a normal diode knee
+* is enormous relative to the 0-1V control-signal swing here, so the
+* "fast discharge" path barely conducted for most of the transition and
+* dly_hs/dly_ls ended up crossing 0.5 almost together anyway (a first
+* trial's i(vin) showed a -159A spike). IS=1e-6 (Schottky-like, low knee)
+* lets this small-signal steering diode actually turn on within the
+* available ~1V swing.
+.model ddt D(IS=1e-6 N=1.0)
+
+Rchg_hs pwm dly_hs {rdt}
+Ddis_hs dly_hs dis_hs ddt
+Rdis_hs dis_hs pwm {rdisch}
+Cdly_hs dly_hs 0 {cdt} IC=0
+
+Rchg_ls pwm_inv dly_ls {rdt}
+Ddis_ls dly_ls dis_ls ddt
+Rdis_ls dis_ls pwm_inv {rdisch}
+Cdly_ls dly_ls 0 {cdt} IC=0
+
+
+.tran 2n {ttot} 0 uic
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+run
+meas tran t_period TRIG v(pwm) VAL=0.5 RISE=1900 TARG v(pwm) VAL=0.5 RISE=1901
+let fsw_meas = 1/t_period
+meas tran vout_avg_early AVG v(vout) FROM=8u TO=10u
+meas tran vout_avg_mid AVG v(vout) FROM=1500u TO=1502u
+meas tran vout_avg_final AVG v(vout) FROM=3990u TO=4000u
+meas tran vout_max_final MAX v(vout) FROM=3990u TO=4000u
+meas tran vout_min_final MIN v(vout) FROM=3990u TO=4000u
+let vout_ripple_final = vout_max_final - vout_min_final
+print t_period fsw_meas vout_avg_early vout_avg_mid vout_avg_final vout_max_final vout_min_final vout_ripple_final
+write ~/Work/data/ngspice_augmentation/envelope/env_r3d_softstart_redproof/env_r3d_softstart_redproof.raw
+wrdata ~/Work/data/ngspice_augmentation/envelope/env_r3d_softstart_redproof/env_r3d_softstart_redproof_reference.txt v(vout) i(L1) v(vrefnode)
+.endc
+.end

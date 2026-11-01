@@ -1,0 +1,17 @@
+* card #482: draw-once form, single-run exact-match check.
+* proc_off is declared "once(agauss(...))" -- must be evaluated exactly
+* once per run. a/b are plain copies (RHS = bare "proc_off"); R1/R2
+* reference proc_off directly, R5/R6 reference it indirectly through
+* a/b. All four resistors must read back IDENTICAL resistance in one run.
+.param proc_off = once(agauss(0, 10m, 3))
+.param a = proc_off
+.param b = proc_off
+R1 1 0 R='1k*(1+proc_off)'
+R2 2 0 R='1k*(1+proc_off)'
+R5 5 0 R='1k*(1+a)'
+R6 6 0 R='1k*(1+b)'
+.control
+op
+print @r1[resistance] @r2[resistance] @r5[resistance] @r6[resistance]
+.endc
+.end

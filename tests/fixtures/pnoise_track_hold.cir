@@ -1,0 +1,32 @@
+* pnoise_track_hold.cir -- card #509 SECOND pass: a clean switched-RC
+* track-and-hold sampler, the classic kT/C closed-form case. Vin -> Rtrack
+* (a PLAIN, noisy resistor, the ONLY noise source in this circuit) ->
+* trnode; a smooth (tanh, gon/goff/ksw -- same idiom pnoise_r2_smooth.cir
+* and pac_r3_ctrl2out.cir's own switches use) behavioural gate Bsw couples
+* trnode to vout (the sampling cap C1) ONLY during a short "tracking"
+* window (duty*T) each period; during the much longer "hold" window,
+* Bsw's off-conductance is small enough that C1 is effectively isolated
+* (see .param comment below for the margin). Rtrack*C1 << duty*T (chosen
+* >=20x margin) so the tracking window fully settles each cycle -- the
+* textbook condition for the sampled voltage's variance to be the
+* R-independent kT/C1 result (see docs/pss-pac.md's `.pnoise` section,
+* "Independent validation -- second pass", for the derivation and the
+* zero-order-hold/sinc^2 folded-spectrum prediction this fixture's own
+* `.pnoise` output is checked against).
+.param rtrack=1k c=10p fclk=100k duty=0.05 gon=1 goff=1e-9 ksw=20
+
+* small deterministic ripple (SAME period as the clock) so the large-
+* signal orbit has visible ripple for PSS-SHOOT's own fast-state/ripple-
+* floor heuristic to lock onto -- a perfectly flat DC Vin gives a
+* genuinely periodic but RIPPLE-FREE orbit (a valid steady state, just a
+* trivial constant one), which that heuristic rejects as a "degenerate
+* all-off fixed point"; this changes nothing about the NOISE physics
+* below (a deterministic large-signal ripple in Vin does not affect the
+* small-signal/noise analysis PSS's orbit is linearised around).
+Vin vin 0 DC 1 SIN(1 0.05 {fclk} 0 0)
+Rtrack vin trnode {rtrack}
+Bsw trnode vout I = (V(trnode)-V(vout)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(clk)-0.5))))
+C1 vout 0 {c}
+Vclk clk 0 PULSE(0 1 0 5n 5n {duty*(1/fclk)} {1/fclk})
+
+.end

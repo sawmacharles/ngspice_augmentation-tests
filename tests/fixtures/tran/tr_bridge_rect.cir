@@ -1,0 +1,16 @@
+* tr_bridge_rect -- diode bridge rectifier with a big smoothing C (15 V peak, 50 Hz, 1 mF, 100 ohm): stiff charging pulses every half cycle
+* stock: completes at default settings
+* probe: v(out) v(a)
+.model dsch D(IS=1e-8 N=1.05 RS=0.05 CJO=50p TT=5n BV=40 IBV=1m)
+Vs a b SIN(0 15 50)
+Rga a 0 1Meg
+Rgb b 0 1Meg
+D1 a out dsch
+D2 b out dsch
+D3 0 a dsch
+D4 0 b dsch
+Cb out 0 1m
+RL out 0 100
+.meas tran vout_end FIND v(out) AT=95m
+.tran 20u 100m
+.end

@@ -1,0 +1,244 @@
+* b_long_switch -- bench deck (ngspice_augmentation card #467, plan T9.1,
+* bench task 1b): refs/r4_pcm_buck.cir (peak-current-mode buck, same power
+* stage as r3/r4, smooth B-source switches -- see refs/r4_pcm_buck.cir for
+* the full design derivation) run for 20ms (~10000 switching periods)
+* instead of r4's original 6ms, to stress long-transient timestep/output
+* overhead rather than device evaluation (r4 has no BSIM4 devices; that is
+* deck (a)'s job). Derived mechanically (sed) from refs/r4_pcm_buck.cir,
+* changing only the .tran stop time and the final/mid measurement windows
+* to match; not hand-tuned further. Do not hand-edit -- regenerate from
+* refs/r4_pcm_buck.cir plus bench/README.md's sed recipe if refs/ changes.
+* run: ngspice -b b_long_switch.cir from bench/decks/ (relative .include)
+* R4 peak-current-mode buck, fixed clock (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r4_pcm_buck.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r4_pcm_buck/)
+*
+* Same power stage as R3 (L=10uH C=100uF Esr=10mOhm Rload=3.3), fixed clock
+* fs=500kHz, but the inner loop is peak current-mode: a sense resistor
+* Rsense in series with the inductor gives Vcs=I_L*Rsense; a smooth
+* comparator trips when Vcs plus an optional slope-compensation ramp
+* exceeds the current reference vc (the outer voltage loop's error-amp
+* output); that resets a smooth RS latch that was set at the start of every
+* clock period. All devices are SMOOTH (tanh-transition B-source switches
+* and comparators, a continuous latch) -- no ideal `sw`, no XSPICE digital,
+* same restriction as R3.
+*
+* Smooth RS latch (no memory element in plain analog SPICE, so this is
+* built explicitly): node q in [0,1] is a capacitor Cq driven by
+*   Cq*dq/dt = gset*Set(t)*(1-q) - greset*Reset_active*q
+* Set(t) is a short deterministic PULSE at every clock edge (like a real
+* clock input to an RS latch, not a feedback comparator, so it does not
+* need to be "smooth" in the saltation sense); Reset_active=0.5*(1+tanh(kc*
+* (Vcs+slope-vc))) is the actual current-mode feedback event and IS smooth.
+* gset gives the Set edge a ~Cq/gset ~= 10ns snap (<<T=2us). greset is set
+* much larger (1, vs gset=1e-4) because Reset_active is not a clean pulse:
+* it is a smooth comparator that is only briefly non-negligible right at
+* the current-sense crossing, then decays toward (numerically) exactly 0 as
+* Vcs moves away from Vc -- so the reset "pull" effectively switches off on
+* its own, leaving q parked at whatever it reached (found 2026-09-27, card
+* #450: with greset=gset=1e-4 and kc=30, q only reached a floor ~0.13 and a
+* ceiling ~0.89, and the naive duty proxy avg(v(q)) came out at 0.37-0.44
+* against an ideal Vout/Vin=0.30 even though Vout itself regulated
+* correctly -- see the duty_meas comment in .control below). kc=100 (vs 30)
+* and greset=1 narrow that floor/ceiling gap enough that the switches
+* (which saturate well before q reaches either end, given ksw=30) still see
+* a clean binary gate signal; q itself is not used as the duty measurement
+* (v(sw) is, see .control) so the residual floor/ceiling offset does not
+* matter for the control loop, only for how duty must be measured.
+*
+* Voltage loop: type-II compensator (simpler than R3's type-III -- peak
+* current-mode control removes the inductor pole from what the voltage loop
+* sees, leaving an approximately single-pole Rload/Cout plant, standard
+* current-mode result), same ideal-ish op-amp construction as R3 (and the
+* same co_oa=100p fix for the same local-instability trap found there).
+* XP (../../stb/lgprobe.lib) sits in the voltage loop, between vout and the
+* feedback divider, same placement as R3/R6.
+*
+* VOLTAGE-LOOP DESIGN (averaged-model estimate, not measured from this
+* switching deck): plant seen by the voltage loop Gvc(s) ~=
+* (1/Rsense)*Rload*(1+s*Esr*Cout)/(1+s*Rload*Cout) (peak current-mode
+* approximation: inner loop makes I_Lpeak*Rsense track vc, so duty is
+* replaced by an effective current source referred through Rsense).
+* fpole=1/(2*pi*Rload*Cout)=482.3 Hz, fESR=159154.9 Hz. Target crossover
+* fc=20kHz (well under fs/10=50kHz, deliberately conservative for a
+* current-mode inner loop this simplified); zero at fpole to cancel the
+* single pole, extra pole at 125kHz to roll off before fESR/fs/2. Estimated
+* result (python cmath calc): |loop| crosses 0dB once at fc=20kHz, phase
+* -91.9 deg there, PM ~= 88.1 deg (ESTIMATE, averaged model, ignores
+* current-loop sampling/subharmonic dynamics -- that is exactly what
+* T5.3 pac_sampling is for). R1=10k R2=50.51k C1=25.21pF C2=6.534nF.
+*
+* Current-mode duty: D is set by Vin (the loop regulates Vout=3.3V
+* regardless of Vin, so D~=Vout/Vin emerges from Vin choice, as required):
+*   vin_v=11    -> D ~= 0.30   (this deck's default)
+*   vin_v=7.33  -> D ~= 0.45
+*   vin_v=6.0   -> D ~= 0.55 (>0.5): the textbook peak-current-mode
+*     subharmonic instability threshold. With vslope_amp=0 (this deck's
+*     default) expect period-2 (subharmonic) oscillation in i(L1)/v(vout)
+*     at D>0.5; raising vslope_amp (e.g. to ~0.5*m2*tclk, m2=Vout/L the
+*     inductor's down-slope) should restore stability. See refs/README.md
+*     for what was actually run and measured for all three cases.
+* Slope compensation is .param vslope_amp (0 here, so it can be set to 0
+* per the task; the D>0.5 case is expected to need it).
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table). Four runs, changing only vin_v/vslope_amp (the .param
+* defaults below are the vin_v=11/vslope_amp=0 case; the other three were
+* run with sed-substituted copies, not checked in separately):
+*  - vin_v=11 (D~=0.30, this deck's default, no slope comp): fsw=500.04kHz
+*    (t_period=1.999827us, single fundamental period -- no subharmonic).
+*    duty 0.3286 (500us, still settling) -> 0.3055 (6000us) vs ideal
+*    Vout/Vin=0.30. Vout: 3.5578V(500us)->3.3002V(3000us)->3.3000V(6000us)
+*    -- settled by ~3ms (this deck runs 6ms/3000 periods, not 1.5ms: an
+*    earlier attempt at 1.5ms was still ~0.4% off target and visibly
+*    converging). Ripple(6000us window)=4.651mV. il 0.768-1.233A. Runtime
+*    7.7s.
+*  - vin_v=7.33 (D~=0.45, no slope comp): fsw=499.997kHz, single period.
+*    duty 0.4583(final) vs ideal 0.4502. Vout settles to 3.300017V by 3ms.
+*    Ripple=3.619mV. Stable, same pattern as D=0.30. Runtime 7.4s.
+*  - vin_v=6.0 (D~=0.55 ideal, >0.5, no slope comp, vslope_amp=0): NOT
+*    stable -- t_period measured 4.000027us, i.e. EXACTLY 2x the clock
+*    period (250kHz where q crosses 0.5, vs the 500kHz clock): period-2
+*    subharmonic oscillation, the textbook peak-current-mode instability at
+*    D>0.5 with no slope compensation. duty_meas_final on one such window
+*    came out 0.0208 (a narrow pulse, alternating with a wide one the
+*    window did not land on) -- a real symptom, not a measurement error
+*    (ripple over the long window rose to 7.409mV, il_min dropped to
+*    0.639A, both consistent with an alternating wide/narrow pulse
+*    pattern). Vout's long-window average still reads ~3.300V (the
+*    alternation partly cancels over many periods), so Vout alone would
+*    NOT have shown this -- t_period/ripple/duty are what catch it. This
+*    is exactly the verify.md T4.3 red-proof case (an unstable loop must
+*    be reported non-converged, not silently averaged away). Runtime 7.2s.
+*  - vin_v=6.0, vslope_amp=0.15 (same D~=0.55, WITH slope comp): stable --
+*    t_period back to 2.000003us (single fundamental period). duty_meas_
+*    final=0.5600 vs ideal 0.55. Vout settles to 3.300020V by 3ms.
+*    Ripple=2.935mV (lower than even the D=0.30/0.45 cases -- slope comp
+*    also damps the current loop's sensitivity, as expected). Confirms
+*    slope compensation restores stability at D>0.5, as intended by
+*    T5.3's design (0.15 was picked as roughly half the natural down-slope
+*    m2=Vout/L=330000 A/s referred through Ri_eff=0.4, i.e.
+*    0.5*330000*0.4*tclk=0.132, rounded up; not finely tuned). Runtime 7.6s.
+.param vin_v=11 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=50.51k c1=25.21p c2=6.534n
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=100
+.param rsense=0.05 rigain=8
+.param vslope_amp=0
+.param cq=1p gset=1e-4 greset=1
+.param setpw={0.01*tclk}
+
+Vin vin 0 DC {vin_v}
+.ic v(vc)=0.6 v(compin)=1 v(fbnode)=1 v(fbtop)=0 v(vout)=0 v(q)=0
+* (same op-amp DC-operating-point trap as r3_vm_buck.cir: the type-II
+* feedback has no DC path across C1/C2, so .ic gives 'uic' a sane start)
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+Rsense sw swcs {rsense}
+L1 swcs swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+.include ../../stb/lgprobe.lib
+XP fbtop vout lgprobe
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa vc 0 vrefnode compin {gm_oa}
+Roa vc 0 {ro_oa}
+Coa vc 0 {co_oa}
+R1in fbnode compin {r1}
+C1f compin vc {c1}
+R2f compin n2 {r2}
+C2f n2 vc {c2}
+
+* slope compensation ramp (0 at each clock edge, up to vslope_amp over the period)
+Vslope slope 0 PULSE(0 {vslope_amp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+* current-sense gain: Rsense is small (50 mOhm, so it does not load the
+* power path -- an earlier attempt used Rsense=0.4 directly as the sense
+* element and it dropped ~0.4V at 1A, badly distorting Vout/duty; found
+* 2026-09-27, card #450, by noticing duty_meas settled to 0.41 against an
+* ideal Vout/Vin=0.30 with no other explanation). Amplify instead:
+* Ri_eff = rsense*rigain = 0.05*8 = 0.4, the same effective transresistance
+* the compensator design above assumes, without the power-path drop.
+Bcs vcs 0 V = {rigain}*V(sw,swcs)
+* current-sense comparator (smooth): trips when Vcs+slope exceeds vc
+Bcmp reset_sig 0 V = 0.5*(1+tanh({kc}*(V(vcs)+V(slope)-V(vc))))
+* clock set-pulse (deterministic, not a feedback event)
+Vsetp setp 0 PULSE(0 1 0 1n 1n {setpw} {tclk})
+* smooth RS latch
+Cq q 0 {cq}
+* Sign note (found 2026-09-27, card #450, via an isolated 6-line reproducer):
+* ngspice's B-source current `Bxxx n1 n2 I=expr` delivers expr as current
+* flowing n1->n2 (resistor-like, matching Bhs/Bls above), so for a current
+* INTO a capacitor at n1=q referenced to n2=0, the capacitor sees -expr;
+* the intended dq/dt = +[gset*Set*(1-q) - greset*reset*q] therefore needs
+* expr = -[that], i.e. the terms below are negated relative to the ODE in
+* the header comment. Getting this backwards made q diverge to -1e28
+* within a few us in an early attempt (confirmed with the reproducer).
+Bq q 0 I = {greset}*V(reset_sig)*V(q) - {gset}*V(setp)*(1-V(q))
+
+.control
+* filetype=binary, not ascii (ngspice_augmentation card #467, plan T9.1,
+* accel candidate "raw-binary-output", ACCEPTED): gprof profiling showed
+* the single end-of-run `write` call at 8.1% of this deck's CPU time
+* (research/transient-acceleration.md section 2); switching the raw-file
+* encoding from ascii to binary is a pure I/O-representation change (same
+* computed .meas values, verified bit-identical) and measured 41% faster
+* median wall-clock (36.14s -> 21.29s, n=5) on this deck. wrdata's own text
+* trace is unaffected (a separate, much smaller write; 'set filetype' only
+* governs the 'write' command's .raw format).
+set filetype=binary
+* 6ms (3000 periods), not 1.5ms: found 2026-09-27 (card #450) that this
+* deck's voltage loop settles much more slowly than R3/R6's (still ~0.4%
+* off target and still visibly converging at 1.5ms in an early attempt);
+* a 6ms debug run confirmed full settling (Vout flat to 6 digits by the
+* last two of three windows). Runtime scales linearly (~2s/1.5ms measured),
+* so 6ms is still well under the ~5 minute budget.
+rusage cputime
+tran 10n 20m 0 uic
+rusage cputime
+meas tran t_period TRIG v(q) VAL=0.5 RISE=250 TARG v(q) VAL=0.5 RISE=251
+let fsw_meas = 1/t_period
+* duty via avg(q) is a bad proxy here (found 2026-09-27, card #450): the
+* smooth RS latch's q does not swing cleanly 0..1 -- it plateaus around
+* ~0.89 high and ~0.12 low (the reset comparator's activity vanishes once
+* vcs moves away from vc, "freezing" the decay) -- close enough to 0/1 that
+* the switches (saturated well outside that range by ksw) still behave as a
+* clean binary gate signal, but avg(q) itself is skewed by the offset
+* floor/ceiling and gave duty=0.37-0.44 against an ideal Vout/Vin=0.30 with
+* Vout regulating correctly to 3.300018V -- a measurement artifact, not a
+* control bug (confirmed: avg(v(sw))/vin_v = 0.300002, matching ideal,
+* checked with a fine-grained trapezoid integration of a debug run's
+* v(sw) trace). Use avg(v(sw))/vin_v instead: v(sw) itself saturates much
+* closer to a true 0/Vin square wave, and this is also just the physically
+* correct definition of duty cycle (average switch-node voltage / Vin).
+* (divide by AVG(v(vin)), not the {vin_v} param -- .param is a netlist-
+* elaboration-time substitution, not a control-script vector; referencing
+* it directly in 'let' failed with "vin_v is not available", found
+* 2026-09-27, card #450)
+meas tran vin_avg_early AVG v(vin) FROM=498u TO=500u
+meas tran duty_meas AVG v(sw) FROM=498u TO=500u
+let duty_meas = duty_meas/vin_avg_early
+meas tran vin_avg_final AVG v(vin) FROM=19998u TO=20000u
+meas tran duty_meas_final AVG v(sw) FROM=19998u TO=20000u
+let duty_meas_final = duty_meas_final/vin_avg_final
+meas tran vout_avg_early AVG v(vout) FROM=490u TO=500u
+meas tran vout_avg_mid AVG v(vout) FROM=9990u TO=10000u
+meas tran vout_avg_final AVG v(vout) FROM=19990u TO=20000u
+meas tran vout_max_final MAX v(vout) FROM=19990u TO=20000u
+meas tran vout_min_final MIN v(vout) FROM=19990u TO=20000u
+let vout_ripple = vout_max_final - vout_min_final
+meas tran il_max_final MAX i(L1) FROM=19990u TO=20000u
+meas tran il_min_final MIN i(L1) FROM=19990u TO=20000u
+print t_period fsw_meas duty_meas duty_meas_final vout_avg_early vout_avg_mid vout_avg_final vout_max_final vout_min_final vout_ripple il_max_final il_min_final
+write ~/Work/data/ngspice_augmentation/accel/bench/b_long_switch/wave.raw
+wrdata ~/Work/data/ngspice_augmentation/accel/bench/b_long_switch/wave.txt v(vout) v(q) v(vc) i(L1) v(sw)
+.endc
+.end

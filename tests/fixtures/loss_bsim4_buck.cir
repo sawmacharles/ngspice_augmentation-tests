@@ -1,0 +1,57 @@
+* loss_bsim4_buck -- small open-loop synchronous buck built from real
+* BSIM4 (level=54) MOSFET power switches -- card #481 fixture for
+* tools/loss.py's new MOSFET device coverage. Same topology, timing and
+* power-stage values as loss_mos1_buck.cir (see its header for the full
+* rationale); only the `.model` cards change, to level=54/BSIM4. This is
+* the model level that motivated the sense-source method in the first
+* place (docs/loss.md, module docstring of tools/loss.py): BSIM4 does not
+* expose `is`/`ib`/`p` in its own OP-parameter table at all (checked
+* directly against ngspice's device source, src/spicelib/devices/bsim4/
+* b4.c -- only `id`, `ibs`, `ibd` exist there), so a MOSFET power tool that
+* read @name[is]/[ib]/[p] would silently under-count this model's gate/
+* bulk/body-diode current; the inserted-0V-sense-source method used here
+* never depends on what a compact model's own OP table happens to expose.
+* Inline model cards (no external model files), quasi-static
+* (acnqsmod=0), capmod=0 and igcmod/igbmod=0 to keep this a plain
+* resistive-channel-plus-body-diode switch (same spirit as tests/fixtures/
+* stb3_bsim4_cgd.cir's minimal BSIM4 card), version=4.8.2 pinned.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param duty=0.28 dead=20n
+
+.model nch4 nmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=1.0 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=300 vsat=1.1e5
+.model pch4 pmos level=54 version=4.8.2
++ mobmod=0 capmod=0 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0
++ toxe=3e-9 toxp=3e-9 toxm=3e-9
++ vth0=-1.0 k1=0.4 k2=0 k3=0 w0=2.5e-6
++ u0=100 vsat=0.8e5
+
+Vin vin 0 DC {vin_v}
+
+* PMOS high-side: source=vin, drain=sw, bulk=source
+Mhs sw g_hs vin vin pch4 w=100000u l=1u
+* NMOS low-side: source=0, drain=sw, bulk=source
+Mls sw g_ls 0 0 nch4 w=50000u l=1u
+
+Vghs g_hs 0 PULSE({vin_v} {vin_v-5} {dead/2} 5n 5n {duty*tclk-dead} {tclk})
+Vgls g_ls 0 PULSE(0 5 {duty*tclk+dead/2} 5n 5n {(1-duty)*tclk-2*dead} {tclk})
+
+Csw sw 0 100p
+L1 sw swl 10u IC=0
+Rdcr swl vout 10m
+Resr vout cx 10m
+Cout cx 0 100u IC=0
+Rload vout 0 3.3
+
+.control
+set filetype=ascii
+tran 2n 1.5m 0 uic
+meas tran vout_avg_final AVG v(vout) FROM=1490u TO=1500u
+meas tran vout_max_final MAX v(vout) FROM=1490u TO=1500u
+meas tran vout_min_final MIN v(vout) FROM=1490u TO=1500u
+print vout_avg_final vout_max_final vout_min_final
+.endc
+.end

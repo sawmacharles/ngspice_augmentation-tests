@@ -1,0 +1,32 @@
+* pxf_r2_switched_rc.cir -- card #499 (plan T5.4): switched-RC LPTV
+* fixture for `.pxf` (body only, no `.control` block -- same
+* pac_lti.cir/r2_switched_rc.cir pattern test_pac.py/test_pxf.py use).
+* Same core topology as refs/r2_switched_rc.cir (single state x=v(vx):
+* Vin drives vx through Rin, a clocked ideal switch additionally ties vx
+* to ground through Rsw for the first duty*T of every period), PLUS a
+* second independent source, Iinj, injecting directly at vx -- the second
+* source `.pxf`'s per-source sweep needs to be a meaningful multi-source
+* test (r2_switched_rc.cir itself has only Vin). Neither Vin nor Iinj
+* carries a netlist `AC` value here, same reason as pxf_lti.cir.
+*
+* test_pxf.py's check_pxf_r2() cross-checks, for EACH source, `.pxf ...
+* vx sources="Vin" sources="Iinj" method="shoot" solver="td"` (this
+* fixture, one run) against `.pac ... solver=td` with ONLY that source's
+* own `AC 1` set (two separate single-source runs) -- this is the card's
+* required "switched-RC" fixture of the three `.pxf`-vs-`.pac` cross-
+* checks. (refs/r2_analytic.py's closed-form g0() is Vin-only and is left
+* to the existing pac_sb0(b) check in test_pac.py; this fixture's job is
+* the per-source `.pxf`-vs-`.pac` cross-check, not a fresh analytic
+* derivation for Iinj.)
+.param rin=10k rsw=10k c=1n fclk=100k duty=0.5
+
+Vin vin 0 DC 1
+Rin vin vx {rin}
+Iinj 0 vx DC 0
+C1 vx 0 {c}
+Rsw vx sw1 {rsw}
+Sswitch sw1 0 clk 0 SWCLK
+.model SWCLK SW(vt=0.5 vh=0.05 ron=1e-4 roff=1e9)
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*(1/fclk)} {1/fclk})
+
+.end

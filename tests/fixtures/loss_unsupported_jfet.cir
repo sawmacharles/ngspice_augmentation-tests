@@ -1,0 +1,37 @@
+* loss_unsupported_jfet -- red-proof fixture for card #481's "never silently
+* skip" requirement: a tiny buck-like circuit (Vin/switch/L/C/Rload, all
+* otherwise fully supported device kinds) with ONE extra device of a kind
+* tools/loss.py does not know how to compute power for: a native JFET (J).
+* J1 sits harmlessly in parallel with Rload (gate tied to its own drain, a
+* trivial diode-connected-ish load that draws a small but genuinely nonzero
+* current -- not a no-op device), so its own power is real and NOT
+* negligible relative to P_in, but small enough that a tool which silently
+* dropped it (the pre-card-#481 behaviour) would still show a deceptively
+* small residual. Expected/required tools/loss.py behavior: J1 must be
+* enumerated, listed under "excluded" (kind J, "unhandled device kind J"),
+* and the run must exit 2 / COULD NOT RUN -- never a silent "pass".
+.param vin_v=12 fs=500k tclk={1/fs} duty=0.3
+.param gon=70 goff=1e-6
+
+Vin vin 0 DC {vin_v}
+Vpwm pwmv 0 PULSE(0 1 0 2n 2n {duty*tclk-4n} {tclk})
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*V(pwmv))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*(1-V(pwmv)))
+
+L1 sw vout 10u IC=0
+Cout vout 0 100u IC=0
+Rload vout 0 3.3
+
+* the one unsupported device kind this fixture exists to exercise: drain=
+* vout, gate=source=0 (Vgs=0, a normally-on JFET's ordinary operating
+* region -- a real, nonzero current load, not a degenerate no-op device)
+.model jn NJF(vto=-2 beta=1e-3)
+J1 vout 0 0 jn
+
+.control
+set filetype=ascii
+tran 2n 300u 0 uic
+meas tran vout_avg_final AVG v(vout) FROM=290u TO=300u
+print vout_avg_final
+.endc
+.end

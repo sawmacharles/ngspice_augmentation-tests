@@ -1,0 +1,6 @@
+* xspice_an_sine: XSPICE time source 'sine' as the clock (driven=1) (card #551)
+Vc c 0 DC 0
+A1 c o1 m
+.model m sine(cntl_array=[-1 1] freq_array=[100k 100k] out_low=-0.5 out_high=1.0)
+Rl o1 out 1k
+Co out 0 100p

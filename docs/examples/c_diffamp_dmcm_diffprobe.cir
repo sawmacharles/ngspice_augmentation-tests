@@ -1,0 +1,70 @@
+* c_diffamp_dmcm_diffprobe.cir -- fully differential transconductor with an
+* independent DM feedback loop and a separate CMFB loop, probed with
+* stb/diffprobe.lib for tools/stb.py --mode dm|cm (docs/stb.md example (c)).
+*
+* NEGATIVE-FEEDBACK POLARITY FIXED card #464, 2026-09-28: the original
+* G1p/G1n/Gcmfb control-node order gave POSITIVE feedback in both the DM
+* and CMFB loops (T(1 Hz) = -12.9 DM, -3333 CM; PM printed as 274/186 deg,
+* which "Interpreting margins" wrongly called legitimate). Fixed the same
+* way as refs/r1c_fully_diff.cir: swap each VCCS's control-node order
+* (flips the sign of the current it injects, touches no pole), and lower
+* gmcorr 1m -> 8u so the CM loop's phase margin lands in a genuine,
+* non-degenerate 30-90 deg range instead of near zero. See docs/stb.md's
+* example (c) and "Interpreting margins" for the new, correct numbers.
+*
+* Why a CMFB stage is required for this example: a differential amplifier's
+* differential-mode (DM) loop and common-mode (CM) loop are physically
+* different loops with different compensation -- a real DM/CM stb demo
+* needs both loops to actually be closed. Here:
+*   G1p/G1n   -- the odd-symmetric DM transconductor (zero response to a
+*                common-mode input by construction: current = gm1*(vfbn-vfbp),
+*                which is 0 when vfbp=vfbn).
+*   Gcorrp/Gcorrn -- common-mode-only correction current, driven by the CMFB
+*                amplifier (Gcmfb/Rcmfb/Ccmfb), sensing the output average
+*                through Rsp/Rsn.
+*   Rf1/Rin1, Rf2/Rin2 -- the DM feedback divider (closes the DM loop).
+* outp/outn are the amplifier's own outputs (loaded by Ro/Co); outpfb/outnfb
+* are downstream of the probe, feeding both the DM divider and the CM sense
+* divider -- so ONE diffprobe pair (XP) breaks both the DM loop and the CM
+* loop at once. a = downstream (outpfb/outnfb), b = upstream (outp/outn),
+* consistently on both branches -- see stb/diffprobe.lib.
+*
+* Because the network is exactly symmetric between its p and n halves, DM
+* and CM loop gain are each exact (not approximate) from reading branch 1
+* alone -- the standard differential/common-mode half-circuit theorem (see
+* stb/diffprobe.lib's header comment).
+*
+* Run (both modes):
+*   python3 tools/stb.py docs/examples/c_diffamp_dmcm_diffprobe.cir --probe XP --mode dm --sweep "dec 30 1 100meg"
+*   python3 tools/stb.py docs/examples/c_diffamp_dmcm_diffprobe.cir --probe XP --mode cm --sweep "dec 30 1 100meg"
+* See docs/stb.md for the measured margins and how they compare to the
+* native probe2=/mode= run in docs/examples/c_diffamp_dmcm_native.cir.
+
+.param gm1=10m ro=200k co=5p rf=99k rin=1k rsense=2meg
+.param gmcmfb=100u rcmfb=500k ccmfb=20p gmcorr=8u
+
+.include ../../stb/diffprobe.lib
+
+G1p outp 0 vfbp vfbn {gm1}
+G1n outn 0 vfbn vfbp {gm1}
+Gcorrp outp 0 vcmfb 0 {gmcorr}
+Gcorrn outn 0 vcmfb 0 {gmcorr}
+Rop outp 0 {ro}
+Cop outp 0 {co}
+Ron outn 0 {ro}
+Con outn 0 {co}
+
+XP outpfb outp outnfb outn diffprobe
+
+Rf1 outpfb vfbp {rf}
+Rin1 vfbp 0 {rin}
+Rf2 outnfb vfbn {rf}
+Rin2 vfbn 0 {rin}
+Rsp outpfb vcs {rsense}
+Rsn outnfb vcs {rsense}
+
+Gcmfb vcmfb 0 0 vcs {gmcmfb}
+Rcmfb vcmfb 0 {rcmfb}
+Ccmfb vcmfb 0 {ccmfb}
+
+.end

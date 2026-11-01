@@ -1,0 +1,11 @@
+* tr_bsrc_abs -- B-source abs(): ideal full-wave rectifier with a kink at every zero crossing, RC smoothing (non-differentiable, not discontinuous)
+* stock: completes at default settings
+* probe: v(f) v(r)
+V1 in 0 SIN(0 2 1k)
+Br r 0 V = abs(v(in))
+R1 r f 1k
+C1 f 0 1u
+RL f 0 5k
+.meas tran vavg AVG v(f) FROM=3m TO=5m
+.tran 2u 5m
+.end

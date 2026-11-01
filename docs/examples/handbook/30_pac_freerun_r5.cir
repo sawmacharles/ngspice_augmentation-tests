@@ -1,0 +1,41 @@
+* 30_pac_freerun_r5.cir -- handbook example (card #534): `.pac` on a FREE-RUNNING converter (R5, hysteretic buck; the
+* switching frequency, ~422.7 kHz, is an OUTPUT of the loop). The `trigger="q"` fields make the shooting PSS find the orbit
+* by a Poincare-section shoot on the comparator-latch node q; `.pac` then runs by default for frequencies <= 0.25 x fsw
+* (card #503) and, since card #517, with a self-consistent tight solver profile for the polish + recording passes.
+* Body of tests/fixtures/pac_r5_ctrl2out_20k.cir; the sweep is 20/60/100 kHz in one card.
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+Vrefsrc vrefn 0 DC {vref} AC 1
+.ic v(q)=0.5
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+* same construction as refs/r5_hysteretic_buck.cir's Bq, {vref} replaced by
+* V(vrefn) (DC-equal, AC-flagged) so a small-signal perturbation of the
+* comparator's own setpoint is the "control" input this .pac card measures
+* control-to-output against:
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-(V(vrefn)-{hys}/2+{hys}*V(q))))))
+
+.pac 427350 450e-6 vout 200 10 45 1e-4 lin 3 20e3 100e3 method="shoot" solver="td" trigger="q" trigval=0.5 trigdir="rise"
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pac_r5.txt v(vout)
+.endc
+.end

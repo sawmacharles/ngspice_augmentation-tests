@@ -1,0 +1,10 @@
+R7 .pxf solver=td, forward (adjoint=0) vs adjoint (adjoint=1), |H| in dB per source -> vout (they also should equal .pac)
+    5000 Vin    fwd     -9.18 dB  adj    -33.22 dB  diff  -24.04 dB
+    5000 Vctrl  fwd   -125.48 dB  adj   -125.97 dB  diff   -0.48 dB
+    5000 Iinj   fwd    -21.12 dB  adj    -20.85 dB  diff   +0.27 dB
+   20000 Vin    fwd    -17.49 dB  adj    -41.52 dB  diff  -24.03 dB
+   20000 Vctrl  fwd   -124.64 dB  adj   -125.23 dB  diff   -0.58 dB
+   20000 Iinj   fwd    -18.69 dB  adj    -18.68 dB  diff   +0.01 dB
+  200000 Vin    fwd    -41.46 dB  adj    -65.16 dB  diff  -23.70 dB
+  200000 Vctrl  fwd   -128.91 dB  adj   -129.50 dB  diff   -0.59 dB
+  200000 Iinj   fwd    -22.76 dB  adj    -22.77 dB  diff   -0.01 dB

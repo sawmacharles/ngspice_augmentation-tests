@@ -1,0 +1,10 @@
+* tr_sw_selfctl -- SW whose control node is the node it switches (VT 1 V, VH 0): a 2 V pulse through 1 kOhm charges a 1 pF node until the switch clamps it: self-referential switch state, chatter at the threshold
+* stock: FAIL: timestep too small at ~2.5% of the run (switch controlled by its own node, VH=0)
+* probe: v(a)
+.model swn SW(RON=1 ROFF=1e9 VT=1 VH=0)
+V1 in 0 PULSE(0 2 1u 1n 1n 20u 40u)
+R1 in a 1k
+S1 a 0 a 0 swn
+C1 a 0 1p
+.tran 1n 40u
+.end

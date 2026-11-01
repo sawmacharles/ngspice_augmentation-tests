@@ -1,0 +1,17 @@
+{
+  "template_path": "15_mc_template.cir",
+  "seed": 1,
+  "n": 100,
+  "ngspice": "ngspice",
+  "params": [
+    {"name": "GA", "scope": "global", "dist": "gauss", "nominal": 0.0, "sigma": 0.02},
+    {"name": "LA", "scope": "local", "dist": "gauss", "nominal": 0.0, "sigma": 0.01},
+    {"name": "LB", "scope": "local", "dist": "gauss", "nominal": 0.0, "sigma": 0.01}
+  ],
+  "measures": ["r1", "r2"],
+  "checks": [
+    {"type": "correlation", "a": "r1", "b": "r2", "expect": 0.8},
+    {"type": "sigma", "measure": "r1", "expect": 22.360679774997898}
+  ],
+  "max_workers": 4
+}

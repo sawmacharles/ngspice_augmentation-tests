@@ -1,0 +1,70 @@
+* loss_diode_buck -- open-loop asynchronous buck (ONE controlled switch,
+* Bhs, plus a NATIVE `D` freewheel diode instead of a second controlled
+* switch) -- card #481 fixture for tools/loss.py's new native-diode device
+* coverage (docs/loss.md: "Per-element power: D (diode)").
+*
+* WHY NOT r3d_vm_buck_deadtime.cir's Bbody->D substitution directly (what
+* the card's task literally asked first): tried it (tests/fixtures/
+* loss_r3d_native_diode.cir, since removed) and it ran and produced a small
+* residual, but it also correctly EXCLUDED Bcmp and Bpwminv -- found,
+* independent of anything this card touches, that r3d's own dead-time
+* network (Rchg_hs/Rdis_hs pwm<->dly_hs, Rchg_ls/Rdis_ls pwm_inv<->dly_ls)
+* gives node `pwm`/`pwm_inv` a fanout of 3 (the driving V=expr B-source's
+* own 2 terminals, PLUS the RC network's 2 more terminal-slots there), which
+* trips loss.py's existing "V-defining B-source with external loading"
+* exclusion (pre-existing, card #470 -- current cannot be inferred from a
+* V=expr B-source's own expression when something besides its own 2
+* terminals draws current from the node it defines). This is a genuine,
+* separate loss.py limitation (B-source current inference, not D/M device
+* coverage) confirmed to also apply to the UNCHANGED refs/r3d_vm_buck_
+* deadtime.cir itself (not something this substitution introduced -- see
+* docs/loss.md Limits). Out of scope for card #481 to fix. This fixture
+* sidesteps it entirely with a topology where the freewheeling diode does
+* not need any second controlled switch or dead-time steering network at
+* all: a standard non-synchronous buck (Bhs is a plain `I=expr` B-source,
+* never subject to the V-external-loading check; the PWM reference is a
+* plain `V` PULSE source, always a supported native-current device
+* regardless of fanout).
+*
+* Same power-stage VALUES as R3/R4/R3d (12V nominal, L=10uH Rdcr=10mOhm
+* Cout=100uF Resr=10mOhm Rload=3.3, fs=500kHz, gon/goff switch conductances)
+* for consistency with the rest of this project's fixtures; duty raised a
+* bit (0.32) to compensate for the diode's own forward-drop loss (no
+* synchronous low-side switch here), open-loop (fixed duty, no compensator
+* -- this fixture exists to validate loss.py's diode accounting, not to
+* demonstrate a regulated converter design).
+.param vin_v=12 fs=500k tclk={1/fs} duty=0.32
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=70 goff=1e-6
+
+Vin vin 0 DC {vin_v}
+Vpwm pwmv 0 PULSE(0 1 0 2n 2n {duty*tclk-4n} {tclk})
+
+* high-side smooth switch (same tanh-free simple linear-in-pwmv form as
+* R3/R4's own Bhs, just driven directly by the PULSE reference instead of
+* through a comparator+ramp -- no feedback loop needed for this fixture)
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*V(pwmv))
+
+* native low-side freewheel diode (anode=0/ground, cathode=sw -- carries
+* the inductor current whenever Bhs is off and V(sw) is pulled below
+* -Vf, exactly the substitution the card asked for, just without R3d's
+* dead-time network around it)
+.model dbody D(IS=1e-14 N=1.0 RS=0.02)
+Ddiode 0 sw dbody
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+.control
+set filetype=ascii
+tran 2n 1.5m 0 uic
+meas tran vout_avg_final AVG v(vout) FROM=1490u TO=1500u
+meas tran vout_max_final MAX v(vout) FROM=1490u TO=1500u
+meas tran vout_min_final MIN v(vout) FROM=1490u TO=1500u
+print vout_avg_final vout_max_final vout_min_final
+.endc
+.end

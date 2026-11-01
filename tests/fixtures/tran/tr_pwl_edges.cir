@@ -1,0 +1,11 @@
+* tr_pwl_edges -- PWL source with 1 ps edges inside a 1 ms run feeding two RC branches (tau 1 ns and 100 us): the step control must resolve picosecond edges and then stretch to microseconds
+* stock: completes at default settings
+* probe: v(fast) v(slow)
+V1 in 0 PWL(0 0 100u 0 100.001n 1 300u 1 300.001n 0 500u 0 500.001n 1 520u 1 520.001n 0 700u 0 700.001n 0.5 1m 0.5)
+R1 in fast 100
+C1 fast 0 10p
+R2 in slow 10k
+C2 slow 0 10n
+.meas tran vslow FIND v(slow) AT=0.95m
+.tran 1u 1m
+.end

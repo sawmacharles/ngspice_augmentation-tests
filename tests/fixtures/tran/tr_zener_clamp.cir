@@ -1,0 +1,12 @@
+* tr_zener_clamp -- avalanche/zener clamp: 20 V sine through 1 kOhm into a 6.8 V BV diode in parallel with a signal diode (reverse breakdown knee)
+* stock: completes at default settings
+* probe: v(clamp) v(in)
+.model dz D(IS=1e-14 N=1 RS=2 BV=6.8 IBV=5m NBV=1.5 CJO=30p TT=2n)
+V1 in 0 SIN(0 20 1k)
+R1 in clamp 1k
+Dz 0 clamp dz
+Dc clamp 0 dz
+.meas tran vmax MAX v(clamp) FROM=0 TO=3m
+.meas tran vmin MIN v(clamp) FROM=0 TO=3m
+.tran 1u 3m
+.end

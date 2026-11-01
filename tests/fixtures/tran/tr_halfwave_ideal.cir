@@ -1,0 +1,10 @@
+* tr_halfwave_ideal -- half-wave rectifier with an almost ideal diode (N=0.02 -> exp(v/0.5 mV), RS=1 uOhm): extreme exponential, Newton limiting
+* stock: completes at default settings
+* probe: v(out) v(in)
+.model didl D(IS=1e-14 N=0.02 RS=1u)
+V1 in 0 SIN(0 5 1k)
+D1 in out didl
+RL out 0 1k
+.meas tran vpk MAX v(out) FROM=1m TO=3m
+.tran 1u 3m
+.end

@@ -1,0 +1,23 @@
+* card #482: draw-once form, statistical check across resets.
+* Each `reset` re-copies and re-parses the whole deck (a fresh nupa_init(),
+* per numparam/xpressn.c and spicenum.c), so proc_off gets a fresh draw
+* per iteration -- but R1/R2 must read back IDENTICAL resistance to each
+* other WITHIN each iteration (frozen within one circuit instantiation).
+* Wrapped in a plain title-comment line: the first line of any sourced
+* deck is always a title/comment, never parsed as a card (ngspice's own
+* convention -- see MC_2_control.sp).
+.param proc_off = once(agauss(0, 10m, 3))
+R1 1 0 R='1k*(1+proc_off)'
+R2 2 0 R='1k*(1+proc_off)'
+.control
+setseed 482482
+let n = 400
+let i = 0
+dowhile i < n
+  reset
+  op
+  print @r1[resistance] @r2[resistance]
+  let i = i + 1
+end
+.endc
+.end

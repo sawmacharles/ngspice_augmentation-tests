@@ -1,0 +1,30 @@
+* card #709 fixture: the same buck at duty 0.7 (vctrl_dc=1.4)
+* pac_r6od_ctrl2out.cir -- open-loop ASYNCHRONOUS buck: an ideal `sw` high-side switch (500 kHz, ramp vs control) and a CHARGED power
+* diode (CJO + TT) as the freewheel path, so the switch node carries device-model charge next to the ideal switch's event
+* (card #559 item 1; the case that was refused since #544).  {csw} is a native capacitor at the switch node (0 = none: the
+* node's only charge is then the diode's junction + diffusion charge, and the Rsnub/Csnub branch is the only native cap near it).
+* Control-to-output sweep deck, test_pac.py style (no .control block, body only).
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param vramp=2 vctrl_dc=1.4
+.param ronsw=10m roffsw=1Meg
+.param csw=0 cjo=0 tt=0
+
+Vin vin 0 DC {vin_v}
+
+Shs vin sw ctrlnode ramp SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron={ronsw} roff={roffsw})
+D1 0 sw DMOD
+.model DMOD D(IS=1e-9 RS=0.05 N=1.05 CJO={cjo} VJ=0.7 M=0.5 TT={tt})
+Csw sw 0 {csw}
+Rsnub sw nsnub 1e9
+Csnub nsnub 0 1n
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC {vctrl_dc}
+Iinj vout 0 DC 0

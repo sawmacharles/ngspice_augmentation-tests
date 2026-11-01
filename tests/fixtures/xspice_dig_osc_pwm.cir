@@ -1,0 +1,12 @@
+* xspice_dig_osc_pwm: digital/hybrid XSPICE models under .pss (card #551); STATEFILE is replaced by the test osc/pwm
+Vc c 0 DC 0.4
+Aosc c dclk mo
+.model mo d_osc(cntl_array=[0 1] freq_array=[1e6 1e6] duty_cycle=0.5 init_phase=0 rise_delay=1n fall_delay=1n)
+Apw c pw mpw
+.model mpw d_pwm(cntl_array=[0 0.5 1] dc_array=[0.1 0.5 0.9] frequency=250k init_phase=0 rise_delay=1n fall_delay=1n)
+Aq [dclk pw] [a0 a1] dac1
+Rd0 a0 out 1k
+Rd1 a1 out 2.2k
+.model dac1 dac_bridge(out_low=0 out_high=1 t_rise=50n t_fall=50n)
+Co out 0 100p
+Rl out 0 10k

@@ -1,0 +1,10 @@
+* tr_bsrc_expdiode -- B-source diode I = 1e-14*(exp(v/0.0258)-1) without any limiting, 10 V sine through 100 ohm: exp() overflow protection in Newton
+* stock: completes at default settings
+* probe: v(out) v(in)
+V1 in 0 SIN(0 10 1k)
+R1 in out 100
+Bd out 0 I = 1e-14*(exp(v(out)/0.0258)-1)
+Cp out 0 10p
+.meas tran vpk MAX v(out) FROM=0 TO=3m
+.tran 1u 3m
+.end

@@ -1,0 +1,51 @@
+* d_device_mode_cs_cgd.cir -- common-source stage with a large discrete
+* gate-drain (Miller) capacitor, probed in native device mode
+* (`.stb ... probe=M1`) -- docs/stb.md example (d).
+*
+* Why device mode, not loop mode: the only "loop" here is INSIDE the
+* transistor, through Cgd (gate-drain feedback) -- there is no wire outside
+* the device that a Tian loop-mode probe could break to see it (Tian
+* applicability case 2, research/cadence-stb-pstb.md sec 2.6; the same
+* topology as tests/fixtures/stbdev_cs_cgd.cir, which validates this
+* fork's device-mode math against an independent brute-force small-signal
+* reference). probe=M1 nulls M1's gm (gm-only, this fork's production
+* default -- see docs/stb.md's device-mode section for what that does and
+* does not include) and reports the resulting T; no wire is broken at all.
+* tools/stb.py / stb/lgprobe.lib have no equivalent for this -- device
+* mode is native-`.stb`-only (nothing to wire a probe subcircuit into).
+*
+* bulk tied to source (both grounded): gmbs = 0 here, isolating the pure
+* gm-only case cleanly for a first read.
+*
+* Component values: a large W/L and small overdrive (high gm, high ro),
+* with Rd chosen for headroom at this bias -- picked so the Cgd loop's
+* high-frequency gain clearly crosses 0 dB within a 1 Hz-100 MHz sweep
+* (dec 20 1 1e8, below -- NOT 1 GHz, card #466 correction), for a
+* pedagogically clear margin read; not a claim about any real process's
+* device sizing. Verified (not shipped as a test, see docs/stb.md) against
+* an independent brute-force small-signal Bode reference, same technique
+* as tests/test_stb_device.py: max relative error 6.4e-7 over this sweep.
+*
+* Run: <fork prefix>/bin/ngspice-aug -b docs/examples/d_device_mode_cs_cgd.cir
+* (card #466: the NGSPICE=... env-var form only affects this project's own
+* Python test scripts, which read it explicitly -- it does nothing for a
+* plain shell invocation of "ngspice", which stays the system binary
+* regardless; call the fork binary directly, as above, or alias/symlink it.
+* The interactive `stb ... probe=M1` command is in the control block
+* below either way.)
+
+.model nch nmos level=1 vto=0.6 kp=110u lambda=0.02
++ cgso=0 cgdo=0 cgbo=0 cbd=0 cbs=0
+
+Vdd vdd 0 DC 5
+Vin g 0 DC 0.65 AC 0
+Rg g gg 1k
+M1 d gg 0 0 nch w=900u l=1u
+Rd vdd d 20k
+Cgd gg d 500p
+
+.control
+stb dec 20 1 1e8 probe=M1
+quit
+.endc
+.end

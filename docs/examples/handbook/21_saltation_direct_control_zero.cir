@@ -1,0 +1,26 @@
+Reader507 task4: open-loop ideal-switch buck, .pac solver=td control-to-output
+* Card #507 second reader found that this deck (an ideal switch whose power
+* node `sw` has no capacitor, feeding L1 directly) gave .pac/.pxf exactly 0
+* for the control path, with no warning. Fixed by card #510 (patches
+* 0060-0063): the saltation jump is routed onto the inductor current; the
+* result now agrees with tools/pac_perturbed.py within 0.5 dB/3 deg from
+* 1 kHz to 200 kHz, and a warning is printed because this path is validated
+* on this one fixture only. Kept as the regression example.
+Vin vin 0 DC 12
+Vramp vramp 0 PULSE(0 1 0 2u 1n 1n 2u)
+Vctrl vctrl 0 DC 0.5 AC 1
+.model SWMOD SW(vt=0 vh=0 ron=0.05 roff=1e6)
+S1 vin sw vctrl vramp SWMOD
+D1 0 sw DMOD
+.model DMOD D(IS=1e-14 RS=0.02 N=1.05)
+L1 sw vout 10u
+Resr vout voutc 0.01
+Cout voutc 0 100u IC=6
+Rload vout 0 5
+.pac 500k 0 vout 200 1 25 1e-6 lin 2 1000 248744 method="shoot" solver="td"
+.control
+run
+display
+print vout
+.endc
+.end

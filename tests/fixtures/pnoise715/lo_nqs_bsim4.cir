@@ -1,0 +1,16 @@
+* pnoise715/lo_nqs_bsim4.cir -- card #715: BSIM4 common-source stage with a NON-QUASI-STATIC channel (trnqsmod={nq}; W/L 40u/20u, charge
+* relaxation time ~0.1 us) whose gate is driven by a 1 MHz local oscillator (0.9 V +- 0.35 V through Rs 1k: the device swings from near
+* cut-off into triode every period), Rd 20k / Cl 50f.  Output v(out), analysed at 4..43 MHz (omega*tau ~ 3..30), where the relaxing channel
+* charge sets how the gate-resistor noise reaches the output: with nq=0 (quasi-static, same deck) the Rs/Rd part of .pnoise is 0.2..3.9 dB
+* higher.  The pnoise708/pac_nqs_lptv deck of card #559 with Rs 100 -> 1k and the model on one line.  Noise toggles: ntn (BSIM4 ntnoi),
+* tnm (tnoimod), flicker off (noia=noib=noic=0).
+.param nq=1 lo=0.35 ntn=1 tnm=0
+.model nch4 nmos level=54 version=4.8.2 mobmod=0 capmod=2 igcmod=0 igbmod=0 rdsmod=0 rbodymod=0 rgatemod=0 acnqsmod=0 trnqsmod={nq} toxe=3e-9 toxp=3e-9 toxm=3e-9 vth0=0.5 k1=0.4 k2=0 k3=0 w0=2.5e-6 u0=300 vsat=1.1e5 cgso=2e-10 cgdo=2e-10 cgbo=1e-11 cgsl=1e-10 cgdl=1e-10 cf=1e-10 cjs=1e-3 cjd=1e-3 cjswd=1e-10 cjswgd=1e-10 xpart=0 noia=0 noib=0 noic=0 tnoimod={tnm} ntnoi={ntn}
+Vdd vdd 0 3
+Vin in 0 DC 0.9
+Vlo in1 in SIN(0 {lo} 1Meg)
+Rs in1 g 1k
+M1 out g 0 0 nch4 w=40u l=20u as=4p ad=4p ps=10u pd=10u
+Rd vdd out 20k
+Cl out 0 50f
+.end

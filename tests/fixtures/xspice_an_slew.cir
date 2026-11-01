@@ -1,0 +1,6 @@
+* xspice_an_slew: XSPICE code model 'slew' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 PULSE(0 1 0 100n 100n 4.9u 10u)
+A1 in o1 m
+.model m slew(rise_slope=1e5 fall_slope=3e5)
+Rl o1 out 1k
+Co out 0 100p

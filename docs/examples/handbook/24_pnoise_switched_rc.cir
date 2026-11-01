@@ -1,0 +1,22 @@
+* 24_pnoise_switched_rc.cir -- handbook example (card #534): .pnoise (periodic / cyclostationary noise) of the
+* switched-RC LPTV circuit of example 06/12 with a SMOOTH (tanh) switch (fixture tests/fixtures/pnoise_r2_smooth.cir,
+* card #509). Rin (10k) and Rsw (100) are the noisy resistors; Bsw is a behavioural switch (noiseless).
+.param rin=10k rsw=100 c=1n fclk=100k duty=0.5 gon=1e4 goff=1e-9 ksw=30
+
+Vin vin 0 DC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx swnode {rsw}
+Bsw swnode 0 I = V(swnode) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(clk)-0.5))))
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*(1/fclk)} {1/fclk})
+
+.pnoise 100e3 100e-6 vx 2000 1 50 1e-6 vx Vin dec 5 1k 1meg method="shoot" solver="td" dev=1
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pnoise_r2.txt onoise_spectrum onoise_Rin onoise_Rsw
+.endc
+.end

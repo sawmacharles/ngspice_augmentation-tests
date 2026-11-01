@@ -1,0 +1,16 @@
+* card #709 fixture: boost with a charged diode (cj 100 pF, tt 2 ns)
+* boost, low-side ideal switch, output diode (chargeless); continuous conduction
+.param fs=500k tclk={1/fs}
+Vin vin 0 DC 5
+Rdcr vin vl 10m
+L1 vl sw 10u IC=0
+S1 sw 0 ctrlnode ramp SWMOD
+.model SWMOD SW(vt=0 vh=0.005 ron=10m roff=1Meg)
+D1 sw vout DMOD
+.model DMOD D(IS=1e-9 RS=0.05 N=1.05 CJO=100p VJ=0.7 M=0.5 TT=2n)
+Cout vout cx 22u IC=0
+Resr cx 0 10m
+Rload vout 0 10
+Vramp ramp 0 PULSE(0 2 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode 0 DC 0.8
+Iinj vout 0 DC 0

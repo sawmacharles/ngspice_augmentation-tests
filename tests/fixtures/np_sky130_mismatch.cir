@@ -1,0 +1,20 @@
+* card #482 regression: sky130-style per-instance mismatch idiom must be
+* unchanged. A subckt-local (not "once") agauss .param, instantiated
+* twice -- each X-instantiation gets its own scope (numparam pushes a
+* fresh local symbol table per subckt call, subckt.c/xpressn.c), so the
+* two instances must get INDEPENDENT draws. This mirrors sky130's public
+* PDK documentation for its own per-instance mc_mm_switch idiom (read
+* from sky130's own public docs, not from any off-limits private deck --
+* see docs/mc.md's own note on this convention).
+.subckt mres p n
+.param mm = agauss(0, 10m, 3)
+R1 p n R='1k*(1+mm)'
+.ends mres
+
+X1 1 0 mres
+X2 2 0 mres
+.control
+op
+print @r.x1.r1[resistance] @r.x2.r1[resistance]
+.endc
+.end

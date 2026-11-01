@@ -1,0 +1,10 @@
+* tr_relax_sgn -- opamp-less relaxation oscillator with an ideal comparator (B-source sgn, positive feedback divider, RC timing): discontinuous source switching at threshold crossings
+* stock: completes at default settings
+* probe: v(c) v(out)
+Bcmp out 0 V = sgn(v(c) - 0.5*v(out) )*-1
+R1 out c 10k
+C1 c 0 10n
+.ic v(c)=0.1
+.meas tran vmax MAX v(c) FROM=0.5m TO=1m
+.tran 100n 1m
+.end

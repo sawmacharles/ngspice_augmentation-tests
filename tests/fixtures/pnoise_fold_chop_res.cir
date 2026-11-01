@@ -1,0 +1,12 @@
+* pnoise_fold_chop_res.cir -- card #556: a resistor's 1/f (kf, af=2, ef=1) and thermal noise chopped by an ideal square-wave modulator
+* (B-source V(x)*V(sq), 100 kHz, 1 us edges).  Output = x * sq, so S_out(f) = Sum_q |c_q|^2 S_x(|f - q fs|) exactly (c_q: Fourier
+* coefficients of the trapezoid); closed form in test_pnoise.py (ref_trap_coeffs / ref_S_out).  Rdum/Cd only give the PSS a state.
+.param fs=100k trs=1u
+Idc 0 x DC 1m
+R1 x 0 1k rfl
+.model rfl r kf=4e-12 af=2 ef=1
+Vsq sq 0 PULSE(-1 1 0 {trs} {trs} {0.5/fs-trs} {1/fs})
+Rdum sq d 1k
+Cd d 0 1p
+Bchop out 0 V = V(x)*V(sq)
+.end

@@ -1,0 +1,30 @@
+* stb6_posfb_low_gain: card #476 test fixture -- genuine positive feedback at low
+* frequency (T(fmin) real and negative) but with loop gain under 1 there, the
+* "note, not the warning" case DECISION option A requires (|arg T(fmin)| > 150 deg
+* AND |T(fmin)| <= 1).
+*
+* Same topology as refs/r1a_unilateral.cir (unilateral single-pole amplifier, no
+* reverse transmission -- VCCS input draws no current, so the return ratio still has
+* the same closed form), with G1's control-node order swapped (vn,vp instead of
+* vp,vn -- flips the sign of the current G1 injects, touches no pole) and gm reduced
+* so the DC loop gain is comfortably under 1 instead of R1a's 333x:
+*
+*   T(s) = -gm * Zo*Zb / (Zo + R1 + Zb),  Zo = Ro || 1/(s Co),  Zb = R2 || 1/(s Cn)
+*
+* At DC (s=0): T(0) = -gm*Ro*R2/(Ro+R1+R2) = -10u * 1e5*1e5 / 3e5 = -0.33333 --
+* Re(T) < 0 (arg = 180 deg exactly, since T(0) is real), |T(0)| = 0.3333 < 1.
+* Ro*Co and R2*Cn set poles at ~159 MHz / ~795 MHz respectively, far above the
+* 1 Hz-1e10 Hz sweeps this project's tests use, so T(f) is indistinguishable from
+* T(0) at the low end of any such sweep (checked directly in
+* tests/test_stb.py/tests/test_stb_native2.py against this same closed form).
+.param gm=10u ro=100k co=10p r1=100k r2=100k cn=2p
+.include ../../stb/lgprobe.lib
+Vp vp 0 DC 0 AC 0
+G1 0 o vn vp {gm}
+Ro o 0 {ro}
+Co o 0 {co}
+R1 o fb {r1}
+R2 fb 0 {r2}
+XP vn fb lgprobe
+Cn vn 0 {cn}
+.end

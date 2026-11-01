@@ -1,0 +1,31 @@
+* 25_pnoise_track_hold.cir -- handbook example (card #534): .pnoise of a track-and-hold (Rtrack=25k, C=10p, 20 % track
+* window, fclk=100 kHz). Rtrack is the only noise source; its noise folds from ~6 harmonics of fs into the baseband.
+* The held output has an EXACT closed form (docs/pss-pac.md, `.pnoise` second pass; th_analytic_S0() in
+* tests/test_pnoise.py, re-implemented in tests/test_handbook.py), so this is the example that checks the
+* cyclostationary folding against an analytic number. Fixture tests/fixtures/pnoise_track_hold_slow.cir (card #509).
+.param rtrack=25k c=10p fclk=100k duty=0.2 gon=1 goff=1e-9 ksw=20
+
+* small deterministic ripple (SAME period as the clock) so the large-
+* signal orbit has visible ripple for PSS-SHOOT's own fast-state/ripple-
+* floor heuristic to lock onto -- a perfectly flat DC Vin gives a
+* genuinely periodic but RIPPLE-FREE orbit (a valid steady state, just a
+* trivial constant one), which that heuristic rejects as a "degenerate
+* all-off fixed point"; this changes nothing about the NOISE physics
+* below (a deterministic large-signal ripple in Vin does not affect the
+* small-signal/noise analysis PSS's orbit is linearised around).
+Vin vin 0 DC 1 SIN(1 0.05 {fclk} 0 0)
+Rtrack vin trnode {rtrack}
+Bsw trnode vout I = (V(trnode)-V(vout)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(clk)-0.5))))
+C1 vout 0 {c}
+Vclk clk 0 PULSE(0 1 0 5n 5n {duty*(1/fclk)} {1/fclk})
+
+.pnoise 100e3 100e-6 vout 2000 1 50 1e-6 vout Vin lin 3 300 3000 method="shoot" solver="td"
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pnoise_th.txt onoise_spectrum
+.endc
+.end

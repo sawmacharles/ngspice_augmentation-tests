@@ -1,0 +1,46 @@
+* R5 free-running hysteretic buck -- checkpoint RESTART phase, task 1
+* (independent period check). Resumes from pss_r5_freerun2_ckpt_save.cir's
+* ckpt.bin (same cwd -- ckpt.bin is a bare relative name, see
+* docs/checkpoint.md/test_checkpoint.py's own note on why) at tstep=50ps
+* (~47x finer than the original refs/r5_hysteretic_buck.cir's 10ns, which
+* card #489's FIRST pass found gave a period estimate aliased by +-3%
+* cycle-to-cycle jitter) for a 140us window (460us->600us, ~59 switching
+* periods) -- resolves the period well past the 0.02% target this card's
+* task asks for (cross-checked at 10ps on a shorter window in the card
+* #489 SECOND pass report: converged to <0.001ns, i.e. this 50ps grid is
+* not a resolution-limited number). NOT seeded from PSS-FREERUN's own
+* converged x0 -- this is the SAME cold start pss_r5_freerun2_ckpt_save.cir
+* began from, just split across a checkpoint for practical speed (a 140us
+* window at a uniform 50ps tstep would cost the same regardless of when
+* the fine resolution starts).
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+.ic v(q)=0.5
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-({vref}-{hys}/2+{hys}*V(q))))))
+
+.tran 50p 600u 0 uic
+
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+loadstate ckpt.bin
+wrdata r5_freerun2_period.txt v(q)
+.endc
+.end

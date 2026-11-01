@@ -1,0 +1,15 @@
+* tr_boost_sw -- boost converter, SW-model low-side switch, 5 V -> ~9 V open loop, 100 kHz, diode rectifier, 100 cycles
+* stock: completes at default settings
+* probe: v(out) l1#branch
+.model dsch D(IS=1e-8 N=1.05 RS=0.05 CJO=50p TT=5n BV=40 IBV=1m)
+.model swm SW(RON=10m ROFF=10Meg VT=2.5 VH=0.5)
+Vin in 0 DC 5
+Vg g 0 PULSE(0 5 0 20n 20n 4u 10u)
+L1 in sw 22u IC=0
+S1 sw 0 g 0 swm
+D1 sw out dsch
+C1 out 0 47u IC=0
+RL out 0 25
+.meas tran vavg AVG v(out) FROM=0.9m TO=1m
+.tran 50n 1m uic
+.end

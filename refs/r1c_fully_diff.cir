@@ -1,0 +1,113 @@
+* R1c linear fully differential VCCS amplifier with independent DM and CMFB loops
+* (ngspice_augmentation, card #451 subtask 2.2.4, 2026-09-27)
+*
+* NEGATIVE-FEEDBACK POLARITY FIXED card #464, 2026-09-28. The parent found
+* (2026-09-29) that BOTH loops here were POSITIVE feedback: G1p/G1n's
+* control-node order made the DM loop's own output current increase when
+* its own output rose, and Gcmfb's control-node order did the same for the
+* CMFB loop; evidence was T(1 Hz) = -12.9 (DM) / -3333 (CM) from both
+* tools, tools/stbcore.margins/native .stb printing those as "phase
+* margins" of 274/186 deg without flagging them, and a 1 uA transient kick
+* into outp diverging to ~1e29 V within 2 us. Fixed by swapping each
+* VCCS's control-node order (ngspice G-element convention, verified
+* empirically: current injected at n+ = -value*(V(nc+)-V(nc-)) -- swapping
+* nc+/nc- flips the current's sign without touching gm1, any resistor, or
+* any pole) on G1p, G1n and Gcmfb (Gcorrp/Gcorrn deliberately left alone --
+* flipping Gcmfb's sign alone is enough to flip the whole CMFB loop's
+* sign), and lowering gmcorr (1m -> 8u) so the CM loop's phase margin lands
+* in a genuine, non-degenerate 30-90 deg range (56.9 deg measured) instead
+* of the near-zero margin an unchanged gmcorr would leave at the loop's now
+* much higher effective crossover. Now: T(1 Hz) = +12.9 (DM, PM 94.4 deg,
+* a single real pole's crossing, always just above 90) / +26.7 (CM, PM
+* 56.9 deg); a 1 uA transient kick (DM: opposite polarity on outp/outn;
+* CM: same polarity) decays to numerical noise (<1e-20) within a few us in
+* both modes, never diverging -- see the card #464 report and
+* ~/Work/data/ngspice_augmentation/stb4/r1c_kick_{dm,cm}.cir for the
+* traces. The ORIGINAL (still positive-feedback) circuit is kept,
+* unchanged, as tests/fixtures/stb4_r1c_posfb.cir -- the red-proof fixture
+* for tools/stbcore.margins' and native .stb's new
+* "low_f_positive_feedback" warning (Re(T) < 0 at the lowest swept
+* frequency), which this pass also added; see docs/stb.md's "Interpreting
+* margins" section for the full story.
+*
+* Topology: a differential transconductor G1p/G1n (odd-symmetric in vfbp/vfbn,
+* so it has exactly zero response to a common-mode input) plus a separate CMFB
+* path (sense the output average, amplify the error through its own pole, inject
+* a common-mode-only correction current back into the outputs). outp/outn (the
+* transconductor's own output nodes, loaded by Ro/Co) are the probe's upstream
+* (b) terminals; outpfb/outnfb (which feed the DM feedback divider Rf/Rin and the
+* CM sense divider Rsp/Rsn) are the downstream (a) terminals. Both sides of the
+* break carry real passive loads (Ro/Co upstream, Rf+Rin and Rsp downstream),
+* which a Tian-style series/shunt probe needs to give a well-posed two-port;
+* an earlier version of this deck put the probe right at an ideal VCCS's output
+* with nothing passive on the upstream side, which made the voltage-injection
+* run degenerate (v(a)=i(vi)=0 identically -- found while building this fixture,
+* 2026-09-27, see the git history of this file).
+*
+* Because both Rf1/Rf2 (DM feedback taps) and Rsp/Rsn (CM sense taps) hang off
+* the downstream side of the SAME break, one diffprobe pair interrupts both the
+* DM loop and the CM loop -- "breaking both feedback wires" from card #451's
+* brief. XP's branch 1 is the p side (outpfb/outp), branch 2 is the n side
+* (outnfb/outn); a = downstream, b = upstream, per lgprobe.lib's rule, kept
+* consistent on both wires so DM/CM correlation means what it says.
+*
+* The DM loop's only pole is Ro || 1/(s Co) (upstream) in series with the
+* Rf/Rin divider and, in parallel at the downstream node, the Rsense loading
+* described below. The CM loop has that pole AND the CMFB compensation pole
+* Rcmfb || 1/(s Ccmfb), giving it visibly different (more, and lower-frequency)
+* rolloff than the DM loop. See tests/fixtures/r1c_dm_half.cir and
+* r1c_cm_half.cir, both derived from this circuit by the differential/
+* common-mode half-circuit theorem (exact for this exactly symmetric linear
+* network; see stb/diffprobe.lib for why reading branch 1 alone is enough).
+*
+* Under differential-mode excitation, KCL at vcs (whose only connections are
+* Rsp/Rsn, loaded by nothing else) forces vcs = (outpfb+outnfb)/2 = 0 regardless
+* of rsense, but nonzero current still flows from outpfb into it, i.e. Rsp
+* behaves exactly like a resistor rsense from outpfb to true ground.
+*
+* Under common-mode excitation, KCL at vcs instead gives vcs = outpfb = outnfb
+* with the Rsp/Rsn branch currents individually zero (both ends at the same
+* potential), so Rsp/Rsn contribute no loading at all there, only the sensed
+* value vcs = outpfb driving Gcmfb.  Rf1/Rin1 in series (rf+rin) DO still load
+* outpfb under common-mode excitation even though their signal has no further
+* consequence (G1 is exactly common-mode-null), because they are a real
+* resistor to ground -- see the Rfin loading resistor in r1c_cm_half.cir.
+*
+* Under differential-mode excitation, G1's core response to a common-mode
+* vfbp/vfbn input is exactly zero (checked by construction: G1p current =
+* gm1*(vfbn-vfbp), which vanishes when vfbp=vfbn), so Gcmfb/Rcmfb/Ccmfb/Gcorr
+* (driven only by vcs, which is 0 under DM) have no effect on the DM loop; the
+* two loops are exactly decoupled.
+
+.param gm1=10m ro=200k co=5p rf=99k rin=1k rsense=2Meg
+.param gmcmfb=100u rcmfb=500k ccmfb=20p gmcorr=8u
+.include ../stb/diffprobe.lib
+
+* differential forward transconductor + CMFB correction, both driving the
+* upstream (b) side, loaded there by Ro/Co: odd-symmetric G1 has zero CM
+* response, Gcorr is common-mode only.
+G1p outp 0 vfbp vfbn {gm1}
+G1n outn 0 vfbn vfbp {gm1}
+Gcorrp outp 0 vcmfb 0 {gmcorr}
+Gcorrn outn 0 vcmfb 0 {gmcorr}
+Rop outp 0 {ro}
+Cop outp 0 {co}
+Ron outn 0 {ro}
+Con outn 0 {co}
+
+* probe breaks both feedback wires: (outp -> outpfb) and (outn -> outnfb)
+XP outpfb outp outnfb outn diffprobe
+
+* downstream: DM feedback divider and CM sense divider
+Rf1 outpfb vfbp {rf}
+Rin1 vfbp 0 {rin}
+Rf2 outnfb vfbn {rf}
+Rin2 vfbn 0 {rin}
+Rsp outpfb vcs {rsense}
+Rsn outnfb vcs {rsense}
+
+* CMFB amplifier: single-pole gain stage on the sensed common-mode error
+Gcmfb vcmfb 0 0 vcs {gmcmfb}
+Rcmfb vcmfb 0 {rcmfb}
+Ccmfb vcmfb 0 {ccmfb}
+.end

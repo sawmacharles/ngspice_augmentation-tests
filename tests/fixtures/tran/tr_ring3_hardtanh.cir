@@ -1,0 +1,15 @@
+* tr_ring3_hardtanh -- 3-inverter ring of B-source inverters V = -tanh(1e9*v) (gain 1e9) with RC delays: oscillates with ~1e9 V/V slopes at every crossing
+* stock: completes at default settings
+* probe: v(n1) v(n2)
+B1 m2 0 V = -tanh(1e9*v(n1))
+B2 m3 0 V = -tanh(1e9*v(n2))
+B3 m1 0 V = -tanh(1e9*v(n3))
+R1 m1 n1 1k
+R2 m2 n2 1k
+R3 m3 n3 1k
+C1 n1 0 100p
+C2 n2 0 100p
+C3 n3 0 100p
+.ic v(n1)=0.1 v(n2)=0 v(n3)=0
+.tran 1n 5u
+.end

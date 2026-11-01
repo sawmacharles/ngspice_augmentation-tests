@@ -1,0 +1,69 @@
+* pacp_r3_loopgain.cir -- card #494 parallel track B (tools/pac_perturbed.py).
+* Same body as tests/fixtures/pac_r3_ctrl2out.cir (R3 voltage-mode buck,
+* smooth switches, type-III compensator -- see that file's own header for
+* the full circuit derivation, not repeated here), with TWO changes for
+* tools/pac_perturbed.py's own --loop-gain mode:
+*   1. `Vctrl ctrlnode opout DC 0 AC 1` (pac_r3_ctrl2out.cir's own
+*      control-to-output injection) is dropped back to a plain wire
+*      (Vctrl ctrlnode opout DC 0, no AC token) -- --loop-gain does not use
+*      any netlist AC flag (it drives its OWN inline Tian probe with
+*      SIN(...), never `.pac`/`.ac`), and leaving the AC-1 tag in place
+*      would be harmless here (this tool ignores it) but is removed for
+*      clarity: this fixture's only intended small-signal path is the loop
+*      broken at fbtop/vout below.
+*   2. `Vprobe fbtop vout DC 0` (pac_r3_ctrl2out.cir's plain, non-AC-flagged
+*      loop break, itself a substitute for pss_r3_shoot.cir's `XP fbtop
+*      vout lgprobe` -- see that file's header for why lgprobe's own
+*      unconditional `AC 1` cannot be left in a `.pac`-adjacent fixture) is
+*      REMOVED ENTIRELY: tools/pac_perturbed.py's --loop-gain
+*      --probe-nodes fbtop:vout inserts its OWN flat three-device Tian
+*      probe (Ii_pac/Vi_pac/Vb_pac, same topology as stb/lgprobe.lib) in
+*      series between exactly these two nodes; leaving Vprobe in place
+*      would short straight around that probe (both are 0V devices between
+*      the same two nodes) and defeat the loop break entirely.
+* Everything else (power stage, compensator, PWM comparator) is
+* byte-identical to pac_r3_ctrl2out.cir.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=30
+
+Vin vin 0 DC {vin_v}
+
+* smooth high-side (vin->sw) and low-side (sw->0) switches, driven by pwm in [0,1]
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: divider, error amp (type-III), PWM comparator -- NO Vprobe/XP
+* here (see header): tools/pac_perturbed.py's --loop-gain inserts its own
+* probe directly between fbtop and vout.
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Vctrl ctrlnode opout DC 0
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(ctrlnode)-V(ramp))))
+
+.end

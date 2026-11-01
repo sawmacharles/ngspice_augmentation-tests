@@ -1,0 +1,155 @@
+* pac_r3_ctrl2out.cir / pac_r3_line2out.cir / pac_r3_zout.cir -- card #465
+* FIFTH pass, task 1 (pac_sb0(c)): R3 voltage-mode buck body (same devices
+* as tests/fixtures/pss_r3_shoot.cir, no .control block -- test_pac.py
+* appends its own `.pac ...` card + control block, same pattern as
+* pac_lti.cir/r2_switched_rc.cir), with ONE extra AC-flagged injection
+* source added per fixture (`.pac`'s forcing is "the netlist's own
+* AC-flagged source(s)", pacshoot.c's header -- EVERY AC-flagged device is
+* summed into the excitation, so there must be EXACTLY one active per
+* fixture):
+*   ctrl2out: Vctrl spliced in series between the type-III compensator's
+*     output (opout) and the PWM comparator's read of it (a zero-current
+*     read -- Bcmp is a behavioural V-source, draws no current), AC 1 --
+*     same splice point tools/fra_curves_fork.py's instrument_r3() uses
+*     for the FRA reference curve (SUMMARY.md's "control-to-output" row).
+*   line2out: `AC 1` added directly to the existing Vin (the line/output
+*     path is already there -- no new element).
+*   zout: Iinj, a new shunt current source at vout, AC 1 -- same point
+*     instrument_r3() uses for its "output_impedance" FRA row.
+* Injection amplitude is `.pac`'s own AC magnitude (1, unit magnitude --
+* solver=td is linear/small-signal by construction, same as .ac, so the
+* magnitude only sets the output's own scale, cancelled out reading H in
+* dB/deg) -- NOT the 0.01V/0.01A FRA used (irrelevant here, unlike FRA's
+* own two-point finite-difference measurement).
+* `XP fbtop vout lgprobe` -- present in pss_r3_shoot.cir for STB's own
+* Tian-injection probe use -- is replaced here with a plain, non-AC-flagged
+* `Vprobe fbtop vout DC 0` (a 0V short, same DC behaviour lgprobe.lib's own
+* header documents), same substitution test_pac.py's _r3_r4_plainprobe_deck()
+* already applies for the .pstb checks above, needed here for a DIFFERENT
+* reason found while building this fixture (card #465 FIFTH pass): lgprobe's
+* own `Vi x a DC 0 AC 1` (lgprobe.lib) is UNCONDITIONALLY AC-flagged
+* (hardcoded, for stb's own alter-driven two-run protocol) -- left in
+* place, it silently adds a SECOND unit AC injection (a Tian-style series
+* break INSIDE the feedback path, superimposed with whichever source this
+* fixture intends to drive), which is exactly what made the first version
+* of these fixtures (still committed in this card's own git history) read
+* back near-open-loop-magnitude "control-to-output"/"output-impedance"
+* curves tens of dB off the FRA reference -- root-caused by comparing this
+* fixture's structure against the ALREADY-working .pstb fixtures above,
+* which happen to avoid it for the unrelated reason of native `.pstb`
+* `probe=` not supporting lgprobe's 3-device topology at all.
+* R3 voltage-mode synchronous buck, fixed frequency (ngspice_augmentation, card #450, 2026-09-27)
+* run: ngspice -b r3_vm_buck.cir  (writes to ~/Work/data/ngspice_augmentation/refs/r3_vm_buck/)
+*
+* 12V -> 3.3V, fs=500kHz, L/C output filter, type-III compensator built from
+* an ideal-ish op-amp (VCCS Goa + Ro + Co, single dominant pole) with an R/C
+* feedback network (R1..R3, C1..C3), and a PWM comparator. All switches are
+* SMOOTH: the high-side and low-side switches are behavioural (B-source)
+* variable conductances between goff (off) and gon (on), transitioning with
+* tanh(ksw*(pwm-0.5)) -- no ideal `sw`, no XSPICE digital (that is R6's job,
+* rebuilding this same power stage + compensator with ideal `sw` + XSPICE
+* d_pwm, so the two can be compared per T2.1/R6 and T6.1 pac_events).
+* The PWM comparator itself is also smooth: pwm = 0.5*(1+tanh(kc*(vc-ramp))),
+* ramp a PULSE-approximated sawtooth 0..vramp at fs (not an ideal event).
+* Loop-gain injection: XP (../../stb/lgprobe.lib, card #451) sits between the
+* output node and the top of the feedback divider (vout -> XP -> fbtop -> Ra
+* -> fbnode -> Rb -> gnd), so a future stb/PAC run breaks the loop there.
+*
+* COMPENSATOR DESIGN (averaged-model estimate, not measured from this
+* switching deck -- ngspice-45.2 has no periodic AC to measure it with; that
+* is exactly what Phase 5 (T5.1/T5.2 pac_sb0/pstb_loop) will add, checked
+* against refs/... FRA later in T2.3):
+*   Averaged plant Gvd(s) = Vin*(1+s*Esr*C) / (1 + s*(L/Rload) + s^2*L*C)
+*   fLC = 1/(2*pi*sqrt(L*C)) = 5032.9 Hz, fESR = 1/(2*pi*Esr*C) = 159154.9 Hz
+*   Gpwm = 1/Vramp (duty = vc/Vramp), Hfb = Rb/(Ra+Rb) = 1000/3300 = 0.30303
+*   Target crossover fc = fs/10 = 50 kHz. Type-III zeros placed at fLC/2 =
+*   2516.46 Hz (both), poles at fESR = 159154.9 Hz and fs/2 = 250 kHz, gain
+*   set so |loop(fc)| = 1 (see scratch calc, card #450 design notes below).
+*   Estimated result (averaged model, python cmath calc, not from this
+*   deck's .tran): |loop| crosses 0 dB only once, at fc = 50.000 kHz, with
+*   phase -106.5 deg there, i.e. PHASE MARGIN ~= 73.5 deg (ESTIMATE from the
+*   averaged/small-signal model -- the real switching circuit's loop gain is
+*   not measured by this .tran and still needs Phase 2/5 tooling to check).
+*   Component mapping (R1 fixed, standard type-III Zf/Zin formulas, derived
+*   in the design scratch, not re-derived here): R1=10k R2=27.51k R3=101.7
+*   C1=36.35pF C2=2.299nF C3=6.261nF.
+*
+* Op-amp model: VCCS Goa (gm=1000 A/V) into Ro=100 Ohm || Co=100pF, giving
+* open-loop DC gain A0=gm*Ro=1e5 (100dB) and a dominant pole at
+* 1/(2*pi*Ro*Co)=15.9MHz -- far above the compensator's highest pole
+* (fp3=250kHz) so it stays close to ideal (nearly flat gain) across the
+* whole loop-shaping range. A first attempt used a more "realistic" 100Hz
+* dominant pole (GBW=10MHz): tested in isolation (a standalone R1..C3+Goa
+* submodule, no power stage, DC step at the input) it was NOT stable --
+* v(opout) diverged to 1e98 within 200us. That is the feedback network's
+* own noise gain 1/beta(s) intersecting the amplifier's -20dB/decade
+* rolloff with too little phase margin at the amplifier's own (high, since
+* A0 is huge) local crossover -- a real, well-known op-amp compensator
+* design trap, not a switching-circuit effect. Fixed here by pushing the
+* op-amp's own pole far out so it stops interacting with the compensator's
+* poles/zeros; this makes the op-amp much faster than any real part, which
+* is exactly the "ideal-ish" approximation asked for, at the cost of not
+* being a realistic op-amp GBW.
+*
+* Switch idealisation: gon=100 (Ron=10 mOhm), goff=1e-6 (Roff=1 MOhm), ksw=30
+* (tanh steepness in the 0..1 pwm signal, ~35mV transition band). Comparator
+* kc=30 in volts (opout/ramp both 0..~2V), so pwm transitions in roughly
+* 1/kc/(ramp slew rate) ~= 35ns, well under T=2us. (ksw=kc=50 hit "timestep
+* too small" convergence failures around t=22us during debugging; 30 did
+* not -- kept at 30, not chased further since it is smooth-enough either way.)
+*
+* MEASURED (ngspice-45.2, this deck, 2026-09-27; see refs/README.md for the
+* full table). fsw measured 500.30 kHz (t_period=1.998814e-06 s) vs 500 kHz
+* param -- switching is live. duty measured 0.2762 (at 500us) / 0.2777 (at
+* 1500us) vs the ideal Vout/Vin=3.3/12=0.275 -- close, the small excess is
+* the Rdcr/Resr/Ron drop. v(vout) steady-state average: 3.300360 V (490-
+* 500us), 3.299680 V (990-1000us), 3.299578 V (1490-1500us) vs the 3.3 V
+* target -- regulates to within 0.03%, not microvolts, not flat (V-G7).
+* Ripple (max-min, 1490-1500us) = 4.836 mV (0.15% of Vout) -- small but a
+* real, non-zero, resolvable switching ripple. Startup: peak overshoot
+* 4.92 V at t=52.4us (no soft-start in this deck), then a monotonic
+* (non-oscillatory, consistent with the ~73.5 deg PM estimate) decay to
+* within 1% of 3.3V by t~220us (~110 switching periods) and within ~0.1%
+* by t~500us. Runtime for the full 1.5ms/750-period run: 2.1 s.
+.param vin_v=12 fs=500k tclk={1/fs}
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param ra=2300 rb=1000 vref=1
+.param r1=10k r2=27.51k r3=101.7 c1=36.35p c2=2.299n c3=6.261n
+.param vramp=2
+.param gm_oa=1000 ro_oa=100 co_oa=100p
+.param gon=100 goff=1e-6 ksw=30 kc=30
+
+Vin vin 0 DC {vin_v} AC 1
+
+* smooth high-side (vin->sw) and low-side (sw->0) switches, driven by pwm in [0,1]
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(pwm)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(pwm)))))
+
+Csw sw 0 100p
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+* feedback: probe, divider, error amp (type-III), PWM comparator
+Vprobe fbtop vout DC 0
+Ra fbtop fbnode {ra}
+Rb fbnode 0 {rb}
+
+Vrefsrc vrefnode 0 DC {vref}
+Goa 0 opout vrefnode compin {gm_oa}
+Roa opout 0 {ro_oa}
+Coa opout 0 {co_oa}
+
+R1in fbnode compin {r1}
+R3in fbnode n3 {r3}
+C3in n3 compin {c3}
+C1f compin opout {c1}
+R2f compin n2 {r2}
+C2f n2 opout {c2}
+
+Vramp ramp 0 PULSE(0 {vramp} 0 {0.97*tclk} {0.03*tclk} 1n {tclk})
+Bcmp pwm 0 V = 0.5*(1+tanh({kc}*(V(opout)-V(ramp))))
+
+.end

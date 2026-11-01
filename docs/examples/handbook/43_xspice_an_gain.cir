@@ -1,0 +1,6 @@
+* xspice_an_gain: XSPICE code model 'gain' in a periodic circuit (card #551); tests/test_xspice.py appends .options/.pss/.tran
+Vin in 0 SIN(0.3 0.8 100k)
+A1 in o1 m
+.model m gain(gain=2.5 out_offset=0.1)
+Rl o1 out 1k
+Co out 0 100p

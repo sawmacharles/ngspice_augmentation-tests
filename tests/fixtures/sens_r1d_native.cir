@@ -1,0 +1,29 @@
+* R1d five-transistor OTA as a unity-gain follower, level-1 MOSFETs -- NATIVE .stb probe
+* variant of refs/r1d_mos_follower.cir for adjoint sensitivity (card #475, plan T10.7,
+* 2026-09-29), with CL and M2's w parametrized so a finite-difference cross-check can
+* perturb them cleanly. Same topology/bias as refs/r1d_mos_follower.cir; the lgprobe.lib
+* subcircuit is replaced by a plain 0V V-source (native .stb's own probe convention).
+* CL is the load capacitor -- it carries no DC current, so perturbing it changes NOTHING
+* about the DC operating point (every transistor's Vgs/Id/gm is bit-for-bit unchanged):
+* this implementation's own "op point held fixed" assumption (docs/sens.md) is therefore
+* EXACT for CL, not merely an approximation, making it the right parameter to validate
+* the nonlinear small-signal matrix path itself. M2's w DOES move the DC bias point
+* (Id, gm, gds of M1/M2/M5 all shift with it) -- deliberately included as the SAME
+* fixture's op-point-DEPENDENCE demonstration: this implementation's dT/dw is expected
+* to disagree with a true (bias-point-included) finite difference, and tests/test_sens.py
+* checks that disagreement is real and outside tolerance, not silently within it.
+.model nch nmos level=1 vto=0.6 kp=200u lambda=0.05 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.model pch pmos level=1 vto=-0.6 kp=80u lambda=0.08 cgso=0.3n cgdo=0.3n cbd=10f cbs=10f
+.param cl_val=2p m2w=20u
+Vdd vdd 0 DC 3.3
+Vin inp 0 DC 1.5 AC 0
+Ib vdd bias DC 20u
+M5b bias bias 0 0 nch w=10u l=1u
+M5 tail bias 0 0 nch w=20u l=1u
+M1 d1 inp tail 0 nch w=20u l=1u
+M2 out inn tail 0 nch w={m2w} l=1u
+M3 d1 d1 vdd vdd pch w=20u l=1u
+M4 out d1 vdd vdd pch w=20u l=1u
+CL out 0 {cl_val}
+Vprobe inn out DC 0
+.end

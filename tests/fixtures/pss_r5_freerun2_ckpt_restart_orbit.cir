@@ -1,0 +1,38 @@
+* R5 free-running hysteretic buck -- checkpoint RESTART phase, task 2
+* (20-phase orbit-shape check vs the settled .tran, at equal tolerance).
+* Resumes from pss_r5_freerun2_ckpt_save.cir's ckpt.bin at tstep=20ps for
+* a short (12us, ~5 switching periods) window, writing vout/q/iL1 together
+* so tests/test_pss.py's check_r5_freerun2_orbit() can pick two consecutive
+* trigger crossings well inside the window and interpolate 20 equally-
+* spaced phase points between them, comparing against PSS-FREERUN's own
+* emitted trajectory (tests/fixtures/pss_r5_shoot.cir's own output) at the
+* same 20 phases, each expressed as %-of-that-signal's-own-ripple.
+.param vin_v=12 vref=3.3 hys=0.02
+.param lval=10u rdcr=10m cval=100u esrval=10m rload=3.3
+.param gon=100 goff=1e-6 ksw=30 khys=200
+.param cq=1p kdrive=1e-3
+
+Vin vin 0 DC {vin_v}
+.ic v(q)=0.5
+
+Bhs vin sw I = (V(vin)-V(sw)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(q)-0.5))))
+Bls sw 0   I = V(sw)              * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(0.5-V(q)))))
+Csw sw 0 100p
+
+L1 sw swl {lval} IC=0
+Rdcr swl vout {rdcr}
+Resr vout cx {esrval}
+Cout cx 0 {cval} IC=0
+Rload vout 0 {rload}
+
+Cq q 0 {cq}
+Bq q 0 I = {kdrive}*(V(q) - 0.5*(1-tanh({khys}*(V(vout)-({vref}-{hys}/2+{hys}*V(q))))))
+
+.tran 20p 472u 0 uic
+
+.control
+set filetype=ascii
+loadstate ckpt.bin
+wrdata r5_freerun2_orbit.txt v(vout) v(q) i(L1)
+.endc
+.end

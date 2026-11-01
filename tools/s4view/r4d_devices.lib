@@ -1,0 +1,63 @@
+* r4d_devices.lib -- device bodies for the R4d schematic view (card #681).
+* Each .subckt is one schematic symbol; pin order = the symbol's pin order.
+* The equations are the ones in refs/r4d_pcm_buck_deadtime.cir, unchanged.
+
+.subckt resistor p n r=1k
+R1 p n {r}
+.ends resistor
+
+.subckt capacitor p n c=1p ic=0
+C1 p n {c} IC={ic}
+.ends capacitor
+
+.subckt inductor p n l=1u ic=0
+L1 p n {l} IC={ic}
+.ends inductor
+
+.model ddt D(IS=1e-6 N=1.0)
+.subckt diode a k
+D1 a k ddt
+.ends diode
+
+.subckt vpulse p n v1=0 v2=1 td=0 tr=1n tf=1n pw=1u per=2u
+V1 p n PULSE({v1} {v2} {td} {tr} {tf} {pw} {per})
+.ends vpulse
+
+* smooth switch a-b, conducting when V(ctl) > 0.5 (tanh edge of slope k)
+.subckt sw_smooth a b ctl gon=70 goff=1e-6 k=150
+B1 a b I = (V(a)-V(b)) * ({goff}+({gon}-{goff})*0.5*(1+tanh({k}*(V(ctl)-0.5))))
+.ends sw_smooth
+
+* smooth body diode a -> k: vf forward voltage, g on-conductance
+.subckt body_diode a k g=50 vf=0.6 kd=50
+B1 a k I = {g}*(V(a,k)-{vf})*0.5*(1+tanh({kd}*(V(a,k)-{vf})))
+.ends body_diode
+
+* current-sense amplifier: out = gain * V(p, n)
+.subckt csamp out p n gain=8
+B1 out 0 V = {gain}*V(p,n)
+.ends csamp
+
+* peak-current comparator: out = 0.5*(1 + tanh(k*(a + b - c)))
+.subckt cmp_sum out a b c k=100
+B1 out 0 V = 0.5*(1+tanh({k}*(V(a)+V(b)-V(c))))
+.ends cmp_sum
+
+* smooth RS latch: q set by s, reset by r
+.subckt rs_latch q s r cq=1p gset=1e-4 greset=1
+C1 q 0 {cq}
+B1 q 0 I = {greset}*V(r)*V(q) - {gset}*V(s)*(1-V(q))
+.ends rs_latch
+
+.subckt vbuf out in
+B1 out 0 V = V(in)
+.ends vbuf
+
+.subckt vinv out in
+B1 out 0 V = 1-V(in)
+.ends vinv
+
+* transconductance error amplifier: current gm*(V(inp)-V(inn)) into out
+.subckt ota_gm out inp inn gm=1000
+G1 0 out inp inn {gm}
+.ends ota_gm

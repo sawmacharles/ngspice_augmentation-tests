@@ -1,0 +1,42 @@
+* pnoise_r2_smooth.cir -- card #509: switched-RC LPTV fixture for `.pnoise
+* ... method="shoot" solver="td"`, SAME core topology as
+* tests/fixtures/pxf_r2_switched_rc.cir (Vin -> Rin -> vx, a clocked switch
+* additionally ties vx to ground through Rsw for part of the period) but
+* with a SMOOTH (tanh-based behavioural conductance) switch in place of
+* pxf_r2_switched_rc.cir's ideal `sw` -- the true-adjoint engine
+* (pac_engine_run_adjoint_noise(), pacshoot.c) REFUSES a saltation
+* (ideal-switch-event) orbit outright (PAC_ADJOINT_REFUSED, same scope cut
+* as `.pxf ... adjoint=1`, card #504) with NO fallback engine (unlike
+* .pxf's adjoint=0 -- see pacshoot.c's pac_td_pnoise() header), so a
+* genuinely LPTV switched-RC `.pnoise` fixture needs a smooth switch, same
+* reason pac_r3_ctrl2out.cir's own Bhs/Bls power-stage switches are smooth
+* (project ruling #447 A). The switch here is a behavioural CURRENT source
+* (Bsw, exactly Bhs/Bls's own tanh idiom) rather than a variable resistor,
+* so it itself carries NO noise (B-sources are never noisy in ngspice --
+* confirmed, no DEVnoise on ASRC/B); Rsw (10k, a PLAIN, noisy resistor)
+* stays in the circuit at a FIXED value and is shorted out (effectively)
+* when Bsw pulls vx hard to ground -- Rsw's own thermal noise is real and
+* IS a function of the clock phase in the sense that its CONTRIBUTION to
+* vx varies with the switch's own conductance (cyclostationary transfer,
+* not cyclostationary source density) -- a genuinely different LPTV
+* mechanism than pac_r3_ctrl2out.cir's own resistors (whose OWN S(t) is
+* constant; there the LPTV-ness is purely in the transfer function, same
+* as here). No independent analytic or Monte-Carlo cross-check was run on
+* this fixture (see docs/pss-pac.md's `.pnoise` section, "what was
+* skipped") -- test_pnoise.py's own check on it is limited to internal
+* self-consistency (per-device sum-of-squares equals the reported total)
+* and "runs to completion, finite, non-negative, no REFUSED" -- the LTI
+* fixture (pxf_lti.cir) is this card's own quantitative (vs plain .noise)
+* validation, and pac_r3_ctrl2out.cir is the required "buck, per-device
+* table" fixture; this one is the required "switched-RC" fixture, honestly
+* short of an independent quantitative cross-check.
+.param rin=10k rsw=100 c=1n fclk=100k duty=0.5 gon=1e4 goff=1e-9 ksw=30
+
+Vin vin 0 DC 1
+Rin vin vx {rin}
+C1 vx 0 {c}
+Rsw vx swnode {rsw}
+Bsw swnode 0 I = V(swnode) * ({goff}+({gon}-{goff})*0.5*(1+tanh({ksw}*(V(clk)-0.5))))
+Vclk clk 0 PULSE(0 1 0 1n 1n {duty*(1/fclk)} {1/fclk})
+
+.end

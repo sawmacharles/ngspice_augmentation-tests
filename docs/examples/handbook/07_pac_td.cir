@@ -1,0 +1,24 @@
+* 07_pac_td.cir -- .pac ... solver=td, sideband-0 periodic AC of a truly
+* time-invariant RC path riding on an unrelated clocked network (so PSS
+* has a genuine period to shoot on but the small-signal path itself never
+* sees the clock) -- docs/pss-pac.md. Cross-checkable against plain .ac
+* on the same Vin->out path.
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+Vin in 0 DC 1 AC 1
+Rin in out 1k
+Cout out 0 10n
+Rload out 0 10k
+
+.pac 100k 0 clkgnd 2000 1 5 0.001 dec 10 1k 1meg method="shoot" solver="td"
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pac_td_out.txt out
+.endc
+.end

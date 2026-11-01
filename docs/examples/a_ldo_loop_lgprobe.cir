@@ -1,0 +1,46 @@
+* a_ldo_loop_lgprobe.cir -- LDO-style erramp + pass-device loop, probed
+* with stb/lgprobe.lib for tools/stb.py (docs/stb.md example (a), card #463).
+*
+* Linear small-signal model of a typical LDO loop, two stages:
+*   erramp:  G1 (VCCS, gm1) into Rp1||Cp1  -- single dominant pole
+*   pass device: G2 (VCCS, gm2) pushing current from the input rail into
+*                the output node, loaded by Rout (the load) and an output
+*                cap Cout with its ESR (Resr) -- a second pole plus an ESR
+*                zero, exactly the shape a real LDO output filter has.
+*   feedback divider: Rf1/Rf2 sets beta = Rf2/(Rf1+Rf2).
+* All DC sources are 0 V (Vref) or unused by the AC loop (Vin, the rail),
+* so the whole loop sits at a trivial 0 V operating point -- only the AC
+* loop-gain measurement matters here, same convention as refs/r1a_unilateral.cir.
+*
+* Probe: XP fb fbtop lgprobe breaks the feedback wire between the divider
+* tap (fbtop, upstream/b) and the erramp's sensing input (fb,
+* downstream/a) -- see stb/lgprobe.lib for the a/b convention.
+*
+* Run: python3 tools/stb.py docs/examples/a_ldo_loop_lgprobe.cir --probe XP
+*        --sweep "dec 30 10 10meg"
+* See docs/stb.md for the measured margins from this exact deck.
+
+.param gm1=5m rp1=1meg cp1=100p cfb=2p
+.param gm2=400m rout=3.3 esr=50m cout=47u
+.param rf1=68k rf2=12k
+
+.include ../../stb/lgprobe.lib
+
+Vref vref 0 DC 0 AC 0
+G1 0 ea vref fb {gm1}
+Rp1 ea 0 {rp1}
+Cp1 ea 0 {cp1}
+Cfb fb 0 {cfb}
+
+Vin vin 0 DC 5 AC 0
+G2 vin vout ea 0 {gm2}
+Rout vout 0 {rout}
+Cout vout esrnode {cout}
+Resr esrnode 0 {esr}
+
+Rf1 vout fbtop {rf1}
+Rf2 fbtop 0 {rf2}
+
+XP fb fbtop lgprobe
+
+.end

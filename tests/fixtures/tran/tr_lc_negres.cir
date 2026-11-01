@@ -1,0 +1,11 @@
+* tr_lc_negres -- LC oscillator start-up: parallel LC (1.6 MHz) with a saturating negative conductance (B-source, tanh): amplitude growth from 1 mV to a limit cycle
+* stock: completes at default settings
+* probe: v(n)
+L1 n 0 10u
+C1 n 0 1n
+R1 n 0 5k
+Bneg n 0 I = -0.4m*tanh(v(n)/0.3)*2.5
+.ic v(n)=1m
+.meas tran vpk MAX v(n) FROM=40u TO=50u
+.tran 5n 50u uic
+.end

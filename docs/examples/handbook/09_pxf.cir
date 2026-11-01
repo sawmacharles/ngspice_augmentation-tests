@@ -1,0 +1,25 @@
+* 09_pxf.cir -- .pxf, sideband-0 transfer function from EVERY independent
+* source to one fixed output, on the shooting-PSS orbit (docs/pss-pac.md).
+* Same LTI-riding-on-an-unrelated-clock construction as 07_pac_td.cir, plus
+* a second independent source (Iinj) so sources="all" has two rows to
+* report in one run.
+Vclk clk 0 PULSE(0 1 0 1n 1n 5u 10u)
+Rclk clk clkgnd 1k
+Cclk clkgnd 0 1n
+
+Vin in 0 DC 1
+Rin in out 1k
+Iinj 0 out DC 0
+Cout out 0 10n
+Rload out 0 10k
+
+.pxf 100k 0 clkgnd 2000 1 5 0.001 out dec 10 1k 1meg method="shoot" solver="td" sources="all"
+.control
+set filetype=ascii
+set wr_singlescale
+set wr_vecnames
+set numdgt=15
+run
+wrdata pxf_out.txt pxf_vin pxf_iinj
+.endc
+.end
